@@ -150,4 +150,5 @@ Claude Code skill for touch-driven interactive healing H5 — GPU fluid, WebGL s
 
 ---
 
-*Maintained by [云野自由](https://github.com/shasha1108) · v8.0.0 · MIT License*
+
+<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>*Maintained by [云野自由](https://github.com/shasha1108) · v8.0.0 · MIT License*
