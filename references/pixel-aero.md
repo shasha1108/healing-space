@@ -360,63 +360,33 @@ const NES_PALETTE     = ['#000000', '#fcfcfc', '#f8a4c8', '#c084fc']; // NES 暖
 
 ---
 
-## 交互实现铁律
-
-### 单击/双击分离
-
-❌ **禁止使用 p5.js 内置的 `mousePressed()` + `doubleClicked()`** ——双击必先触发单击。
-
-✅ **必须用自定义 `interaction-layer` div + `pointerdown` + 300ms 超时：**
-```javascript
-layer.addEventListener('pointerdown', (e) => {
-  let now = Date.now();
-  if (now - lastTapTime < 300) {
-    clearTimeout(tapTimeout);
-    triggerKnock(x, y);   // 双击
-    lastTapTime = 0;
-  } else {
-    lastTapTime = now;
-    tapTimeout = setTimeout(() => { triggerFeed(x, y); }, 300); // 单击
-  }
-});
-```
+## 实现铁律
 
 ### 像素运动
 
-❌ **禁止 `floor(x / PX) * PX` 强行对齐坐标** → 鱼一格一格跳跃。
+运动计算用浮点，只在绘制原点时 `round()` 到像素网格。禁止对物体坐标本身做 grid snap。
 
-✅ **只在 `translate()` 时 `round()` 原点，运动计算用浮点**：
-```javascript
-f.x += f.vx; f.y += f.vy;  // 连续浮点运动
-translate(round(f.x), round(f.y));  // 只在绘制时对齐
-```
+### 交互事件
 
-### 鱼 AI 状态机（必做）
+不使用 p5.js 内置的双击检测（会先触发单击）。统一使用自定义 `pointerdown` + 时间间隔判断单击/双击。
 
-```
-wander → (食物<350px) → chase → (距离<PX*2.5) → 吃+爱心 → wander
-  ↑                          ↓ 超时
-  └──────────────────────────┘
-flee ← (敲玻璃<400px) ← any
-  ↓ 50帧后
-wander
-```
+### Z-index 分层
 
-**吃食反馈（必做）：** 消除食物 + `reaction=35` → 在 reaction>0 期间画爱心 `#ff5078` + 张嘴帧。
+模糊底板 < canvas 像素层 < 玻璃壳/UI。`backdrop-filter` 绝不放在 canvas 上层。
 
 ---
 
-## 防坑清单
+## 质量自检清单
 
-- ❌ **忘记 `pixelDensity(1)`** → 像素变模糊，失去颗粒感
-- ❌ **用 `background()` 而不是 `clear()`** → 盖住 CSS 渐变底色
-- ❌ **毛玻璃 blur 放在 canvas 上层** → 像素鱼被模糊
-- ❌ **Z-index 没分层** → 必须是 底板(blur) < canvas(锐利像素) < 玻璃壳(无blur)
-- ❌ **鱼用 sin/cos 做主要运动** → 用 Perlin noise 做 wander，sin/cos 只做微摆动
-- ❌ **气泡用 rect() 画** → 气泡应用 circle() 保持圆滑，和像素鱼形成材质对比
-- ❌ **只有 1 种植物** → 至少 5 种植被形态 + 多套配色
-- ❌ **鱼没有阴影** → canvas 加 CSS `filter: drop-shadow()` 产生水下景深感
-- ❌ **鱼没有尾巴摆动** → `sin(tailWag)` 偏移尾鳍 pixel 位置
-- ❌ **玻璃没有厚度** → 四边不同边框粗细 + `::after` 对角高光 + `inset` 内发光
-- ❌ **忽视 `windowResized`** → 缩放窗口后像素密度重置，画面糊掉
-- ❌ **双击/单击不分** → 用 p5 内置事件会冲突，必须自定义 pointerdown
+- [ ] `pixelDensity(1)` + `noSmooth()`，且 `windowResized` 中重复设置
+- [ ] `clear()` 而非 `background()`，CSS 背景透出
+- [ ] Z-index 三层分离，毛玻璃模糊在 canvas 之下
+- [ ] 运动浮点计算 + `translate(round())` 对齐
+- [ ] 交互用自定义 `pointerdown` + 时间差判断，非 p5 内置事件
+- [ ] 主体角色有状态机（≥ 3 个状态）
+- [ ] 主体角色有动画反馈（非纯静态贴图）
+- [ ] 玻璃/容器有立体感（边框不等宽、高光、内发光至少两项）
+- [ ] canvas 有 CSS 景深效果（`drop-shadow` 或等效阴影）
+- [ ] 环境中 ≥ 2 种不同形态装饰元素
+- [ ] 颜色来自预设调色板数组，非硬编码随机 RGB
+- [ ] 移动端适配：`user-scalable=no`，触摸不触发页面缩放
