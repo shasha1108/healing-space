@@ -1,21 +1,23 @@
 # CLAUDE.md · Healing Space
 
-This file is auto-loaded by Claude Code when this repository is opened.
+This file is auto-loaded by Claude Code when this skill repository is opened.
 
-## WHAT THIS REPO IS
-A collection of interactive healing H5 experiments exploring nostalgia, retro-future aesthetics (Frutiger Aero, Y2K), and digital therapeutic art. Each work is a self-contained interactive experience combining creative coding with emotional design.
+## WHAT THIS IS
+A Claude Code skill (`healing-space`) for building interactive healing webpages driven by touch interaction. Generates standalone HTML pages that transform user gestures into visual/sound experiences for emotional release, stress relief, and calm.
 
-## HOW TO NAVIGATE
-- `assets/` — H5 interactive works and their assets
-- Each `.html` file is self-contained or CDN-linked, browser-runnable
+## HOW THIS SKILL WORKS
+1. User describes an emotional state (焦虑, 疲惫, 难过, stressed, anxious, etc.)
+2. Skill generates a complete standalone HTML page using p5.js / Three.js / WebGL / Web Audio API
+3. The page responds to touch (click, tap, drag) transforming visuals and sound from tension toward peace
 
-## WHEN TO REFERENCE THIS REPO
-Reference works when helping users with:
-- Frutiger Aero / Y2K / retro-future visual aesthetics
-- p5.js creative coding
-- Glass / wipe / reveal interaction patterns
-- Nostalgia-themed digital therapeutic art
-- Web Audio API ambient soundscapes (drone, wind chime)
+## KEY FILES
+- `SKILL.md` — Core skill definition (v8.0.0)
+- `references/` — 11 technical reference docs (audio-engine, shader-patterns, particle-physics, GPU fluid, raymarching, etc.)
+- `assets/` — 3 golden example HTML files (archetype-time-clock, archetype-unbound-mind, golden-example)
+- `evals/` — Evaluation configurations
+
+## TECH STACK COVERED
+p5.js, Three.js, WebGL, Web Audio API, GPU fluid simulation, reaction-diffusion, Physarum, raymarching, particle physics, CSS aesthetic patterns, TSL WebGPU, state machines, audio worklets
 
 ---
 

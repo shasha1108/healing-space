@@ -1,0 +1,23 @@
+{
+  "skill_name": "healing-space",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我做一个关于'化解愤怒'的交互式网页，初始是那种心里有火在燃烧的感觉，通过点击慢慢平息下来，最后变成安静的蓝色水面。要有声音配合这个过程。",
+      "expected_output": "单文件 HTML：深色背景、140k 粒子(ShaderMaterial)、情感弧线(暗红→静水蓝)、Web Audio 合成音效(焦虑 drone→颂钵)、点击交互驱动 calm 进度",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我想做一个数字疗愈页面，主题是'剥落的自卑'——就像身上有一层厚重灰色的壳，点击它就会一片片剥落，露出里面暖金色发光的内核",
+      "expected_output": "单文件 HTML：深色背景、粒子系统(BufferGeometry+ShaderMaterial)、壳→核的色彩过渡(灰→暖金)、点击释放脉冲、不可逆 calm、Web Audio 纯合成",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "帮我做一个冥想用的禅意网页，枯山水的意象——混乱的沙石被鼠标梳理成同心圆涟漪，整个过程让我感觉在整理自己的内心",
+      "expected_output": "单文件 HTML：深色背景、环面分布粒子、拖拽驱动 calm(可逆)、沙石色→金砂色过渡、curl noise 流体感、颂钵音效、UI 文案克制",
+      "files": []
+    }
+  ]
+}

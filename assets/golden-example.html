@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>息 · 呼吸光球</title>
+<!--
+  黄金范例：呼吸光球 (Breathing Orb)
+  ====================================
+  本范例集成了 healing-space skill 的全部技术支柱，技术均经过 archetype 作品实战验证：
+    1. Shader 渲染高密度发光粒子（见 references/shader-patterns.md）
+       —— 采用 archetype 的 GPU 端色彩混合：每粒子 aColorFrom/aColorTo + uTransition uniform，
+          在 vertex shader 里 mix，避免每帧 CPU 改 14 万粒子颜色（archetype-unbound-mind 验证）
+    2. Web Audio 纯代码合成音效（见 references/audio-engine.md）
+       —— 焦虑阶段用 45Hz 锯齿波低通 150Hz 做"压抑心跳"（archetype-unbound-mind 验证）
+       —— 治愈阶段颂钵 432Hz/216Hz 双八度共鸣 + 指数衰减（archetype-unbound-mind 验证）
+    3. 粒子物理：弹簧归位 + curl noise + 鼠标斥力（见 references/particle-physics.md）
+    4. 情感弧线状态机（见 references/state-machine.md）
+       —— calm 用 smoothstep 缓动后再驱动一切（archetype-unbound-mind 验证）
+       —— 焦虑时相机抖动 / 治愈时缓慢拉远（archetype-unbound-mind 验证）
+       —— 治愈后进入精确 4-7-8 呼吸引导（4吸+7屏+8呼=19s，archetype-unbound-mind 验证）
+
+  体验：按住屏幕，光球从躁动暗红慢慢沉淀为平静暖白蓝；松手慢慢回落。
+  治愈达成后进入 4-7-8 呼吸引导，颂钵在吸气时轻敲。
+  存成 .html 双击即可运行。建议戴耳机。
+-->
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+        width: 100%; height: 100%; overflow: hidden;
+        background: radial-gradient(circle at 50% 50%, #0a0a12 0%, #020205 100%);
+        font-family: 'Georgia', 'Songti SC', 'STSong', serif;
+        user-select: none; -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    canvas { display: block; position: fixed; inset: 0; }
+
+    /* 噪点遮罩：增加胶片质感，避免画面塑料感（archetype 双范例共用技法） */
+    .noise-overlay {
+        position: fixed; inset: 0;
+        pointer-events: none; z-index: 10;
+        opacity: 0.08;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+    }
+
+    /* UI 层：极简、浮在最上但不挡交互（pointer-events:none） */
+    #ui-layer {
+        position: fixed; inset: 0; z-index: 20;
+        pointer-events: none;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: rgba(255,255,255,0.9);
+        text-align: center; user-select: none;
+    }
+    #title {
+        font-size: clamp(30px, 6vw, 64px);
+        font-weight: 300; letter-spacing: 0.4em;
+        text-indent: 0.4em;
+        /* 双重黑色阴影：保证在最亮粒子前仍清晰（archetype-unbound-mind 验证） */
+        text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.6), 0 0 40px rgba(100,150,255,0.25);
+        margin-bottom: 22px;
+        transition: opacity 0.9s ease, transform 0.9s ease;
+        transform: translateY(8px);
+    }
+    #title.show { opacity: 1; transform: translateY(0); }
+    #title.hide { opacity: 0; transform: translateY(-8px); }
+    #hint {
+        font-size: clamp(13px, 2vw, 16px);
+        font-weight: 300; letter-spacing: 0.32em;
+        text-indent: 0.32em;
+        opacity: 0.55;
+        text-shadow: 0 0 12px rgba(0,0,0,0.9);
+        transition: opacity 0.9s ease;
+    }
+    /* 进度条：极细一根线，克制 */
+    #progress {
+        position: fixed; bottom: 9vh; left: 50%; transform: translateX(-50%);
+        width: min(220px, 50vw); height: 1px; z-index: 20;
+        background: rgba(255,255,255,0.12);
+        pointer-events: none;
+    }
+    #progress::after {
+        content: ''; display: block; height: 100%;
+        width: var(--p, 0%);
+        background: linear-gradient(90deg, rgba(255,120,90,0.7), rgba(150,190,255,0.9));
+        box-shadow: 0 0 10px rgba(150,190,255,0.6);
+        transition: width 0.2s linear;
+    }
+    /* 呼吸引导文字（治愈达成后才显示），JS 实时控制 scale/opacity 跟随呼吸 */
+    #breathe-hint {
+        position: fixed; bottom: 15%; width: 100%;
+        text-align: center; z-index: 20;
+        font-size: clamp(18px, 3vw, 24px);
+        letter-spacing: 0.8em; text-indent: 0.8em;
+        color: #fff; font-weight: 300;
+        text-shadow: 0 4px 15px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8);
+        opacity: 0; pointer-events: none;
+    }
+</style>
+</head>
+<body>
+<div class="noise-overlay"></div>
+<div id="ui-layer">
+    <div id="title" class="show">息</div>
+    <div id="hint">按住，随它一起呼吸</div>
+</div>
+<div id="progress"></div>
+<div id="breathe-hint">吸气 ···</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- ============ 1. Vertex Shader：GPU 端色彩混合 + 呼吸缩放 ============ -->
+<!-- 关键：aColorFrom/aColorTo + uTransition，颜色过渡在 GPU 端 mix，省掉每帧 CPU 改 14 万色（archetype 验证） -->
+<script type="x-shader/x-vertex" id="vertexShader">
+attribute vec3  aColorFrom;   // 躁动态颜色
+attribute vec3  aColorTo;     // 治愈态颜色
+attribute float aSize;
+
+uniform float uTime;
+uniform float uPixelRatio;
+uniform float uGlobalSize;
+uniform float uTransition;    // 0=完全躁动, 1=完全治愈
+uniform float uBreathe;       // 0~1 呼吸相位（治愈后驱动）
+
+varying vec3  vColor;
+varying float vAlpha;
+
+void main() {
+    // 颜色在 GPU 端混合
+    vColor = mix(aColorFrom, aColorTo, uTransition);
+
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+
+    // 大小：治愈态叠加呼吸律动（吸气变大、呼气变小）
+    float breatheBoost = mix(1.0, 1.3 + uBreathe * 1.2, uTransition);
+    gl_PointSize = aSize * uGlobalSize * uPixelRatio * breatheBoost * (320.0 / -mvPosition.z);
+
+    gl_Position = projectionMatrix * mvPosition;
+
+    // alpha 也随过渡/呼吸变化
+    vAlpha = mix(0.45, 0.5 + uBreathe * 0.4, uTransition);
+}
+</script>
+
+<!-- ============ 2. Fragment Shader：柔和圆形 + 发光内核 ============ -->
+<script type="x-shader/x-fragment" id="fragmentShader">
+precision highp float;
+
+varying vec3  vColor;
+varying float vAlpha;
+
+void main() {
+    vec2 uv = gl_PointCoord * 2.0 - 1.0;
+    float dist = length(uv);
+    if (dist > 1.0) discard;
+
+    // 柔和外晕
+    float glow = pow(1.0 - dist, 2.0);
+    // 亮核（核+光晕的层次感）
+    float core = pow(1.0 - dist, 6.0);
+
+    vec3 finalColor = vColor + core * 0.6;
+    gl_FragColor = vec4(finalColor, glow * vAlpha);
+}
+</script>
+
+<script>
+/* ============================================================
+   3. 全局状态机（情感弧线的唯一真相源）
+   ============================================================ */
+const State = {
+    calm: 0,            // 0=躁动, 1=治愈。所有参数都从它派生
+    calmTarget: 0,
+    phase: 'intro',     // 'intro' | 'active' | 'complete'
+    healed: false,      // 是否已达成治愈（达成后进入呼吸引导，不再回落）
+    breathePhase: 0,    // 1=吸 2=屏 3=呼
+    showBreathUI: false,
+    time: 0,
+};
+const COPY = {
+    intro:    { title: '息',           hint: '按住，随它一起呼吸' },
+    active:   { title: '正在沉静',     hint: '保持，感受它的节律' },
+    complete: { title: '安静了',       hint: '松手，它会记得这份平静' },
+};
+let pressing = false;
+
+/* ============================================================
+   4. Web Audio 合成引擎（纯代码，零音频文件）
+   —— 焦虑心跳(锯齿45Hz) + 治愈颂钵(432/216Hz) + 海浪(棕噪)
+   ============================================================ */
+const Audio = {
+    ctx: null, master: null,
+    drone: null, bowl432: null, bowl216: null, bowlGain: null, bowlGain2: null,
+    noiseFilter: null, noiseGain: null,
+    inited: false,
+
+    init() {
+        if (this.inited) return;
+        try {
+        this.inited = true;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) { document.title = '❌ No AudioContext API'; return; }
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0;
+        this.master.connect(this.ctx.destination);
+
+        // (1) 焦虑心跳：锯齿波 45Hz，低通 150Hz → 压抑的低频轰鸣（archetype 验证）
+        const dOsc = this.ctx.createOscillator();
+        dOsc.type = 'sawtooth'; dOsc.frequency.value = 45;
+        const dFilter = this.ctx.createBiquadFilter();
+        dFilter.type = 'lowpass'; dFilter.frequency.value = 150;
+        const dGain = this.ctx.createGain(); dGain.gain.value = 0.4;
+        dOsc.connect(dFilter).connect(dGain).connect(this.master);
+        dOsc.start();
+        this.drone = { gain: dGain };
+
+        // (2) 治愈颂钵：432Hz + 216Hz(低八度)，初始静音，被 strikeBowl() 触发（archetype 验证）
+        const b1 = this.ctx.createOscillator(); b1.type='sine'; b1.frequency.value = 432;
+        this.bowlGain = this.ctx.createGain(); this.bowlGain.gain.value = 0;
+        b1.connect(this.bowlGain).connect(this.master); b1.start();
+        const b2 = this.ctx.createOscillator(); b2.type='sine'; b2.frequency.value = 216;
+        this.bowlGain2 = this.ctx.createGain(); this.bowlGain2.gain.value = 0;
+        b2.connect(this.bowlGain2).connect(this.master); b2.start();
+
+        // (3) 海浪底噪：棕噪 + 低通，跟随呼吸开合（archetype 验证）
+        const buf = this._brownNoise();
+        const nSrc = this.ctx.createBufferSource(); nSrc.buffer = buf; nSrc.loop = true;
+        this.noiseFilter = this.ctx.createBiquadFilter();
+        this.noiseFilter.type = 'lowpass'; this.noiseFilter.frequency.value = 100;
+        this.noiseGain = this.ctx.createGain(); this.noiseGain.gain.value = 0;
+        nSrc.connect(this.noiseFilter).connect(this.noiseGain).connect(this.master);
+        nSrc.start();
+        } catch(err) {
+            document.title = '❌ Audio.init: ' + err.message;
+            this.ctx = null;
+        }
+    },
+
+    resume() {
+        try {
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const t = this.ctx.currentTime;
+        this.master.gain.cancelScheduledValues(t);
+        this.master.gain.setValueAtTime(this.master.gain.value, t);
+        this.master.gain.linearRampToValueAtTime(0.55, t + 2.5);   // 缓淡入，避免爆音
+        } catch(err) { document.title = '❌ Audio.resume: ' + err.message; }
+    },
+
+    // 颂钵敲击：快速起音 + 指数衰减（余音绕梁的空灵感）
+    strikeBowl(intensity) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        this.bowlGain.gain.cancelScheduledValues(now);
+        this.bowlGain2.gain.cancelScheduledValues(now);
+        this.bowlGain.gain.setValueAtTime(this.bowlGain.gain.value, now);
+        this.bowlGain2.gain.setValueAtTime(this.bowlGain2.gain.value, now);
+        this.bowlGain.gain.linearRampToValueAtTime(0.5 * intensity, now + 0.05);
+        this.bowlGain2.gain.linearRampToValueAtTime(0.35 * intensity, now + 0.1);
+        // 指数衰减：泛音悠长（archetype 用 8s/12s，这里同样）
+        this.bowlGain.gain.exponentialRampToValueAtTime(0.0001, now + 8.0);
+        this.bowlGain2.gain.exponentialRampToValueAtTime(0.0001, now + 12.0);
+    },
+
+    // 每帧由主循环调用。calm + breathe 驱动所有连续音频参数（视听联觉）
+    update(calm, breathe) {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        // 焦虑心跳：随治愈进度衰减
+        this.drone.gain.setTargetAtTime(0.4 * (1.0 - calm), t, 0.1);
+        // 海浪：治愈后才浮现，振幅+滤波器跟随呼吸
+        this.noiseGain.gain.setTargetAtTime((0.05 + breathe * 0.25) * calm, t, 0.1);
+        this.noiseFilter.frequency.setTargetAtTime(100 + calm * (150 + breathe * 350), t, 0.1);
+    },
+
+    _brownNoise() {
+        const size = this.ctx.sampleRate * 2;
+        const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < size; i++) {
+            const w = Math.random() * 2 - 1;
+            last = (last + 0.02 * w) / 1.02;
+            d[i] = last * 3.5;
+        }
+        return buf;
+    }
+};
+
+/* ============================================================
+   5. Three.js 场景
+   ============================================================ */
+const COUNT = (window.innerWidth < 768 || /Mobile|Android|iPhone/.test(navigator.userAgent)) ? 60000 : 140000;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, 0, 160);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+
+/* ============================================================
+   6. 粒子系统：球面分布 + 双色 attribute（GPU 端混合）
+   ============================================================ */
+const positions  = new Float32Array(COUNT * 3);
+const velocities = new Float32Array(COUNT * 3);
+const homes      = new Float32Array(COUNT * 3);
+const colFrom    = new Float32Array(COUNT * 3);   // 躁动态色
+const colTo      = new Float32Array(COUNT * 3);   // 治愈态色
+const sizes      = new Float32Array(COUNT);
+const seeds      = new Float32Array(COUNT);
+
+(function distribute() {
+    const R = 55;
+    for (let i = 0; i < COUNT; i++) {
+        const i3 = i * 3;
+        // 均匀球面采样 + 立方根 → 实心球
+        const u = Math.random(), v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi   = Math.acos(2 * v - 1);
+        const r     = R * Math.cbrt(Math.random()) * (0.4 + Math.random() * 0.6);
+        const px = r * Math.sin(phi) * Math.cos(theta);
+        const py = r * Math.sin(phi) * Math.sin(theta);
+        const pz = r * Math.cos(phi);
+        positions[i3]=px; positions[i3+1]=py; positions[i3+2]=pz;
+        homes[i3]=px; homes[i3+1]=py; homes[i3+2]=pz;
+
+        // 躁动态：暗红 + 少量暗紫（archetype 的双色调思路）
+        if (Math.random() < 0.3) {
+            colFrom[i3]=0.9; colFrom[i3+1]=0.1; colFrom[i3+2]=0.4;   // 玫红
+        } else {
+            colFrom[i3]=0.85; colFrom[i3+1]=0.18; colFrom[i3+2]=0.12; // 暗红
+        }
+        // 治愈态：暖白蓝 + 少量金（archetype 的分层上色思路）
+        const rr = Math.random();
+        if (rr < 0.3) {
+            colTo[i3]=1.0; colTo[i3+1]=0.75; colTo[i3+2]=0.35;       // 暖金
+        } else if (rr < 0.7) {
+            colTo[i3]=0.45; colTo[i3+1]=0.7; colTo[i3+2]=1.0;        // 暖白蓝
+        } else {
+            colTo[i3]=0.7; colTo[i3+1]=0.85; colTo[i3+2]=1.0;        // 近白
+        }
+
+        sizes[i] = 0.6 + Math.random() * 1.8;
+        seeds[i] = Math.random();
+    }
+})();
+
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position',   new THREE.BufferAttribute(positions, 3));
+geo.setAttribute('aColorFrom', new THREE.BufferAttribute(colFrom, 3));
+geo.setAttribute('aColorTo',   new THREE.BufferAttribute(colTo, 3));
+geo.setAttribute('aSize',      new THREE.BufferAttribute(sizes, 1));
+
+const material = new THREE.ShaderMaterial({
+    uniforms: {
+        uTime:       { value: 0 },
+        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+        uGlobalSize: { value: 1.0 },
+        uTransition: { value: 0 },
+        uBreathe:    { value: 0 },
+    },
+    vertexShader:   document.getElementById('vertexShader').textContent,
+    fragmentShader: document.getElementById('fragmentShader').textContent,
+    transparent: true,
+    depthWrite: false,
+    depthTest:  false,
+    blending:   THREE.AdditiveBlending,
+});
+const points = new THREE.Points(geo, material);
+scene.add(points);
+
+/* ============================================================
+   7. 物理参数 + curl noise（每粒子统一刚度，可按需拆分）
+   ============================================================ */
+const PHYS = {
+    STIFFNESS: 1.2, DAMPING: 0.94,
+    CURL_STRENGTH: 3.5, REPEL_RADIUS: 60, REPEL_STRENGTH: 10,
+};
+const mouse = { x: 0, y: 0, z: 0, active: false };
+
+function updatePhysics(dt, time) {
+    const p = positions, vel = velocities, h = homes;
+    const stiff = PHYS.STIFFNESS, damp = PHYS.DAMPING, curlS = PHYS.CURL_STRENGTH;
+    const repelR = PHYS.REPEL_RADIUS, repelR2 = repelR * repelR, repelS = PHYS.REPEL_STRENGTH;
+    const mActive = mouse.active, mx = mouse.x, my = mouse.y, mz = mouse.z, pr = pressing;
+    for (let i = 0; i < COUNT; i++) {
+        const i3 = i * 3;
+        const px = p[i3], py = p[i3+1], pz = p[i3+2];
+        // 1. 弹簧归位
+        let ax = (h[i3]   - px) * stiff;
+        let ay = (h[i3+1] - py) * stiff;
+        let az = (h[i3+2] - pz) * stiff;
+        // 2. curl 扰动：每轴一次三角函数（共 3 次，低于 archetype 的 4 次，保证不卡）
+        //    用错位坐标做近似旋度场，视觉上仍是流体般的扰动
+        ax += Math.sin(py * 0.05 + time * 0.3) * curlS;
+        ay += Math.sin(pz * 0.05 + time * 0.25) * curlS;
+        az += Math.sin(px * 0.05 + time * 0.2) * curlS;
+        // 3. 鼠标斥力（按住时增强，"抚平"感）
+        if (mActive) {
+            const dx = px-mx, dy = py-my, dz = pz-mz;
+            const d2 = dx*dx+dy*dy+dz*dz;
+            if (d2 < repelR2) {
+                const d = Math.sqrt(d2) + 0.001;
+                const mul = pr ? 0.4 : 1.0;   // 按住时粒子靠近鼠标会减速（抚平），不按则推开
+                const f = (1 - d / repelR) * repelS * mul;
+                ax += (dx/d)*f; ay += (dy/d)*f; az += (dz/d)*f;
+            }
+        }
+        // 4. 积分 + 阻尼
+        vel[i3]   = (vel[i3]   + ax * dt) * damp;
+        vel[i3+1] = (vel[i3+1] + ay * dt) * damp;
+        vel[i3+2] = (vel[i3+2] + az * dt) * damp;
+        p[i3]   += vel[i3]   * dt;
+        p[i3+1] += vel[i3+1] * dt;
+        p[i3+2] += vel[i3+2] * dt;
+    }
+    geo.attributes.position.needsUpdate = true;
+}
+
+/* ============================================================
+   8. 状态机 + 总线：calm 驱动一切
+   ============================================================ */
+function updateState(dt) {
+    if (State.healed) {
+        // 已治愈：calm 锁定在 1，不回落
+        State.calm = 1;
+        State.calmTarget = 1;
+    } else {
+        if (pressing) {
+            State.calmTarget = Math.min(1, State.calmTarget + dt * 0.22);
+        } else {
+            State.calmTarget = Math.max(0, State.calmTarget - dt * 0.06);
+        }
+        State.calm += (State.calmTarget - State.calm) * Math.min(1, dt * 1.6);
+
+        // 达成治愈
+        if (State.calm >= 0.999) {
+            State.healed = true;
+            Audio.strikeBowl(1.2);   // 爆发瞬间敲响最洪亮的颂钵（archetype 验证）
+            setTimeout(() => { State.showBreathUI = true; }, 3000);
+        }
+    }
+    State.time += dt;
+
+    const prev = State.phase;
+    if (State.healed)            State.phase = 'complete';
+    else if (State.calm < 0.05)  State.phase = 'intro';
+    else                         State.phase = 'active';
+    if (State.phase !== prev) updateUI(State.phase);
+}
+
+// 从 calm 派生物理强度、粒子大小（颜色已交给 GPU）
+function applyCalmToVisuals() {
+    const c = State.calm;
+    // smoothstep 缓动后再驱动（archetype 验证：转化更"有机"）
+    const ts = c * c * (3 - 2 * c);
+    material.uniforms.uTransition.value = ts;
+    // 物理：治愈时归位强、扰动弱（安定）
+    PHYS.STIFFNESS     = 1.2 + 1.5 * c;
+    PHYS.CURL_STRENGTH = 3.5 * (1 - c) + 0.5;
+    PHYS.DAMPING       = 0.93 + 0.04 * c;
+    // 光球膨胀 + 整体增亮
+    material.uniforms.uGlobalSize.value = 0.7 + 1.3 * c;
+}
+
+/* ============================================================
+   4-7-8 呼吸引导（治愈达成后启动）—— archetype 验证的精确周期
+   ============================================================ */
+const breatheHint = document.getElementById('breathe-hint');
+function computeBreathe(time) {
+    if (!State.healed) return 0;
+    const cycle = time % 19;   // 4吸 + 7屏 + 8呼 = 19s
+    if (cycle < 4) {
+        if (State.breathePhase !== 1) {
+            breatheHint.innerText = '吸气 ···';
+            State.breathePhase = 1;
+            Audio.strikeBowl(0.8);   // 开始吸气时轻敲颂钵
+        }
+        return cycle / 4;
+    } else if (cycle < 11) {
+        if (State.breathePhase !== 2) {
+            breatheHint.innerText = '屏息 ···';
+            State.breathePhase = 2;
+        }
+        return 1.0;
+    } else {
+        if (State.breathePhase !== 3) {
+            breatheHint.innerText = '呼气 ···';
+            State.breathePhase = 3;
+            Audio.strikeBowl(0.4);   // 呼气时再轻敲一次，释放压力
+        }
+        return 1.0 - (cycle - 11) / 8;
+    }
+}
+
+/* ============================================================
+   UI 文案切换
+   ============================================================ */
+const titleEl = document.getElementById('title');
+const hintEl  = document.getElementById('hint');
+const progEl  = document.getElementById('progress');
+function updateUI(phase) {
+    titleEl.classList.remove('show'); titleEl.classList.add('hide');
+    hintEl.style.opacity = 0;
+    setTimeout(() => {
+        titleEl.textContent = COPY[phase].title;
+        hintEl.textContent  = COPY[phase].hint;
+        titleEl.classList.remove('hide'); titleEl.classList.add('show');
+        hintEl.style.opacity = 0.55;
+    }, 850);
+}
+
+/* ============================================================
+   相机动力学（archetype 验证：焦虑抖动 / 治愈拉远）
+   ============================================================ */
+function updateCamera(time) {
+    if (State.healed) {
+        // 治愈：缓慢拉远，"退一步欣赏"
+        camera.position.z += (200 - camera.position.z) * 0.005;
+        camera.position.x *= 0.95;
+        camera.position.y *= 0.95;
+    } else {
+        // 焦虑：相机轻微抖动，越焦虑抖得越厉害
+        const shake = (1.0 - State.calm) * 0.6;
+        camera.position.x = Math.sin(time * 20) * shake;
+        camera.position.y = Math.cos(time * 23) * shake;
+        camera.position.z += (160 - camera.position.z) * 0.02;
+    }
+    camera.lookAt(0, 0, 0);
+}
+
+/* ============================================================
+   交互监听（同时激活音频）
+   ============================================================ */
+function pressStart(e) {
+    try {
+        pressing = true;
+        // 首次交互时延迟初始化音频（参考 archetype：避免 mousedown 同步阻塞）
+        Audio.resume();
+        const src = (e.touches && e.touches[0]) ? e.touches[0] : e;
+        updateMouseFromEvent(src);
+    } catch (err) {
+        document.title = '❌ pressStart: ' + err.message + ' | line ' + (err.lineNumber || '?');
+    }
+    if (e.cancelable) e.preventDefault();
+}
+function pressEnd() { pressing = false; }
+function updateMouseFromEvent(e) {
+    if (!e || !e.clientX && e.clientX !== 0) {
+        document.title = '❌ updateMouseFromEvent: bad event ' + typeof e;
+        return;
+    }
+    const nx = (e.clientX / window.innerWidth) * 2 - 1;
+    const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+    const vec = new THREE.Vector3(nx, ny, 0.5);
+    vec.unproject(camera);
+    const dir = vec.sub(camera.position).normalize();
+    const dist = -camera.position.z / dir.z;
+    mouse.x = camera.position.x + dir.x * dist;
+    mouse.y = camera.position.y + dir.y * dist;
+    mouse.z = 0;
+}
+window.addEventListener('mousedown', pressStart);
+window.addEventListener('mouseup',   pressEnd);
+window.addEventListener('mousemove', (e) => { mouse.active = true; updateMouseFromEvent(e); });
+window.addEventListener('mouseleave', () => { mouse.active = false; });
+window.addEventListener('touchstart', pressStart, { passive: false });
+window.addEventListener('touchend',   pressEnd);
+window.addEventListener('touchmove', (e) => {
+    mouse.active = true;
+    if (e.touches[0]) updateMouseFromEvent(e.touches[0]);
+    if (e.cancelable) e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2);
+});
+
+/* ============================================================
+   错误捕获（生产保留：写到标签页标题，便于用户反馈问题）
+   ============================================================ */
+window.onerror = function(msg, src, line, col) {
+    document.title = '❌ ' + msg + ' | line:' + line;
+    return false;
+};
+
+/* ============================================================
+   主循环
+   ============================================================ */
+let lastT = performance.now();
+function loop() {
+    try {
+    const now = performance.now();
+    let dt = (now - lastT) / 1000;
+    dt = Math.min(dt, 0.033);   // 钳制，防切后台后大跳
+    lastT = now;
+    const time = now / 1000;
+
+    updateState(dt);
+    applyCalmToVisuals();
+    updatePhysics(dt, time);
+
+    // 呼吸计算（驱动 shader 的 uBreathe + UI 文字 + 音频）
+    const breathe = computeBreathe(time);
+    material.uniforms.uBreathe.value = breathe;
+    if (State.showBreathUI) {
+        const s = 1.0 + breathe * 0.15;
+        breatheHint.style.transform = `scale(${s})`;
+        breatheHint.style.opacity = 0.3 + breathe * 0.7;
+    }
+
+    material.uniforms.uTime.value = time;
+
+    // 相机动力学
+    updateCamera(time);
+
+    // 整体缓慢自转，让光球有生命感
+    points.rotation.y += dt * 0.05;
+    points.rotation.x = Math.sin(time * 0.1) * 0.1;
+
+    Audio.update(State.calm, breathe);
+
+    // 进度条
+    progEl.style.setProperty('--p', (State.calm * 100).toFixed(1) + '%');
+
+    renderer.render(scene, camera);
+
+    requestAnimationFrame(loop);
+    } catch(err) {
+        document.title = '❌ loop: ' + err.message + ' | line ' + (err.lineNumber || '?');
+        requestAnimationFrame(loop);
+    }
+}
+loop();
+</script>
+</body>
+</html>

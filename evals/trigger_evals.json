@@ -1,0 +1,23 @@
+[
+  {"query": "帮我做一个关于'化解愤怒'的交互式网页，初始是那种心里有火在燃烧的感觉，通过点击慢慢平息下来，最后变成安静的蓝色水面。要有声音配合这个过程。", "should_trigger": true},
+  {"query": "我最近感觉特别焦虑，能帮我做一个可以点击释放压力的页面吗？就是那种粒子飞来飞去，点一下会爆开然后慢慢聚回来的感觉", "should_trigger": true},
+  {"query": "make me a meditative interactive webpage with glowing particles that respond to mouse movement, like a breathing energy orb that calms down when you hold your mouse down", "should_trigger": true},
+  {"query": "想做一个数字疗愈的玩意儿，主题是'剥落的自卑'——身上有一层厚重的灰色外壳，点击就会一片片剥落，露出里面暖金色的发光内核", "should_trigger": true},
+  {"query": "帮我生成一个枯山水禅意交互页面，混乱的沙子被鼠标梳理成同心圆，过程要让人感觉像在整理自己的内心，有声音配合", "should_trigger": true},
+  {"query": "我最近失恋了很难过，你能帮我做一个治愈系的网页吗？想看着什么东西慢慢融化、释放、最后变得温暖平静", "should_trigger": true},
+  {"query": "我今天上班特别累特别emo，帮我写一个可以直接打开的html，上面有很多发光的光点，长按屏幕它们就会慢慢聚成一个温暖的光球", "should_trigger": true},
+  {"query": "想给女朋友做一个生日礼物，是一个网页——打开是一片星空，她点击哪里哪里就亮起来，最后汇聚成一颗心。要有背景音乐的感觉", "should_trigger": true},
+  {"query": "build me a single-file HTML that uses three.js particles to visualize anxiety transforming into calm, with sound synthesized in real-time using Web Audio API", "should_trigger": true},
+  {"query": "能不能做一个沉浸式的声音疗愈页面？就是那种有颂钵声、海浪声，然后画面上有很多发光粒子跟着声音一起呼吸的那种", "should_trigger": true},
+
+  {"query": "帮我用echarts画一个销售数据的柱状图，要能交互筛选时间范围", "should_trigger": false},
+  {"query": "我需要一个React组件，用来展示用户上传的照片画廊，支持左右滑动", "should_trigger": false},
+  {"query": "怎么用Three.js加载一个glTF模型并在网页上旋转展示？", "should_trigger": false},
+  {"query": "我想写一个nodejs脚本，批量下载某个网站上的图片然后压缩成webp格式", "should_trigger": false},
+  {"query": "帮我设计一个冥想App的UI界面，要有计时器、背景音乐选择、还有每日打卡的日历", "should_trigger": false},
+  {"query": "给我写一段JavaScript代码，实现一个音频可视化效果——就是那种随着音乐节奏跳动的频谱柱状图", "should_trigger": false},
+  {"query": "帮我做一个个人博客的首页，深色主题的，要有文章列表和标签云。用HTML+CSS就行", "should_trigger": false},
+  {"query": "能帮我写一个微信小程序吗？功能是每天记录心情，然后生成一周的情绪曲线图", "should_trigger": false},
+  {"query": "帮我用Canvas写一个烟花特效，过年用的，要喜庆红色金色", "should_trigger": false},
+  {"query": "我要做一个网页版的呼吸练习计时器——就是屏幕上显示'吸气4秒、屏息7秒、呼气8秒'的文字动画，简单纯文字就行", "should_trigger": false}
+]
