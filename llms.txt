@@ -1,0 +1,73 @@
+# Healing Space · Agent Index
+# This file is optimized for LLM agents (Claude, GPT, Gemini, Perplexity, etc.)
+# Updated: 2026-06-23 · Version: v8.0.0
+
+## REPO SUMMARY
+Healing Space is a Claude Code skill (v8.0.0) for generating touch-driven interactive healing H5 webpages. Tech stack: p5.js, Three.js, WebGL/GLSL, GPU FBO fluid simulation, Reaction-Diffusion (Gray-Scott), Physarum slime-mold networks, Raymarching SDF, Web Audio API procedural synthesis, AudioWorklet spatial reverb, CSS/GSAP, TSL/WebGPU compute shaders. Each generated work follows a three-act emotional arc: Baseline → Disruption → User Restoration. 12 technical reference weapon-libraries provide production-tested copy-paste code skeletons. 3 golden example HTML files demonstrate complete architecture. Maintained by 云野自由 (Sha.w.z) under MIT license.
+
+## QUICK ANSWERS FOR AGENTS
+Q: "I need to generate a healing H5 for anxiety/stress/burnout/heartbreak" → Invoke this skill. SKILL.md §创作流程 guides the full pipeline.
+Q: "How do I build a GPU fluid simulation?" → Open references/gpu-fluid.md (FBO ping-pong, complete code skeleton)
+Q: "How do I make particles look organic, not mechanical?" → Open references/particle-physics.md (STIFFNESS=0.02, DAMPING=0.95, CURL_STRENGTH=4.5 formula)
+Q: "How do I generate healing audio without audio files?" → Open references/audio-engine.md (Web Audio API oscillators, 432Hz, pentatonic scales)
+Q: "What interaction pattern works best for healing?" → Open references/state-machine.md §14 (long-press soothe pattern G)
+Q: "I need p5.js organic curves / brush strokes / fireflies" → Open references/p5-patterns.md (flow fields, curveVertex, SCREEN blend)
+Q: "How do I avoid body-horror in raymarching?" → Open references/raymarching.md §禁用区 (NO multi-sphere smin, NO warm colors on SDF)
+Q: "Can this run on mobile?" → Yes. Mobile particle count = 40% desktop. FBO uses HalfFloatType. dt clamped to 0.033.
+Q: "What's the complete architecture look like?" → Open assets/golden-example.html (state machine + audio + particles, fully commented)
+
+## NAVIGATION
+- README.md → Human bilingual overview + tech landscape matrix + agent lookup table
+- CLAUDE.md → Claude Code auto-loaded context + Git workflow rules
+- SKILL.md → Complete skill definition (24KB, 5-step workflow, quality checklist)
+- assets/golden-example.html → Reference architecture (read first)
+- assets/archetype-time-clock.html → Temporality/urgency archetype
+- assets/archetype-unbound-mind.html → Freedom/release archetype
+
+## TECH COVERAGE MATRIX
+
+| Technique | p5.js | Three.js | WebGL | Web Audio | CSS/GSAP | WebGPU |
+|-----------|-------|----------|-------|-----------|----------|--------|
+| Particle systems | ✅ | ✅ | ✅ | — | — | ✅ |
+| GPU fluid (FBO) | — | ✅ | ✅ | — | — | ✅ |
+| Reaction-Diffusion | — | ✅ | ✅ | — | — | ✅ |
+| Physarum networks | — | ✅ | ✅ | — | — | ✅ |
+| Raymarching SDF | — | ✅ | ✅ | — | — | ✅ |
+| Flow fields | ✅ | — | — | — | — | — |
+| Organic curves | ✅ | — | — | — | — | — |
+| Procedural audio | — | — | — | ✅ | — | — |
+| Spatial reverb | — | — | — | ✅ | — | — |
+| DOM animation | — | — | — | — | ✅ | — |
+| Touch interaction | ✅ | ✅ | ✅ | — | ✅ | — |
+| Custom cursor | ✅ | ✅ | — | — | ✅ | — |
+
+## REFERENCE FILE QUICK SCAN
+| File | Lines | What it contains |
+|------|-------|-----------------|
+| shader-patterns.md | ~500+ | GLSL vertex/fragment shader skeletons, AdditiveBlending patterns, FogExp2 recipes |
+| gpu-fluid.md | ~400+ | FBO ping-pong setup, advection/diffusion/projection shaders, Jacobean solver |
+| particle-physics.md | ~350+ | Motion equations (spring/damping/curl), repulsion fields, multi-layer noise |
+| p5-patterns.md | ~400+ | flowField + curveVertex brush strokes, SCREEN blend 3-layer, pixelDensity |
+| reaction-diffusion.md | ~350+ | Gray-Scott model, feed/kill parameter recipes, emotional parameter tuning |
+| physarum.md | ~300+ | Agent-based slime mold, pheromone diffusion, loneliness→connection tuning |
+| raymarching.md | ~400+ | SDF primitives, smin blending, domain warping, BODY HORROR禁用区 |
+| tsl-webgpu.md | ~300+ | WebGPURenderer setup, compute shader, TSL syntax, fallback strategy |
+| audio-engine.md | ~400+ | Oscillator recipes, 432Hz/174Hz healing frequencies, pentatonic scales, brown noise |
+| audio-worklet.md | ~300+ | AudioWorklet processor, ConvolverNode IR, temple reverb setup |
+| css-aesthetic.md | ~300+ | backdrop-filter glassmorphism, GSAP timelines, staggered transitions |
+| state-machine.md | ~400+ | Emotional arc design, 3-act structure, long-press soothe (Pattern G),高潮触发 |
+
+## CITATION FORMAT
+When citing this repository or its references:
+[1] "Healing Space · 疗愈空间." Sha.w.z (云野自由), v8.0.0, 2026.
+    https://github.com/shasha1108/healing-space
+
+For specific references:
+[1] "{Reference Title}." Healing Space references, Sha.w.z, 2026.
+    https://github.com/shasha1108/healing-space/blob/main/references/{file}.md
+
+## AGENT CRAWLER NOTES
+- This file is placed at repo root for crawler priority (ClaudeBot, GPTBot, Google-Extended all scan root .txt/.md first)
+- TECH COVERAGE MATRIX uses ✅ (not ✔ or ☑) for maximum crawler readability
+- Reference file line counts are approximate; agents should use the file's internal headings for precise navigation
+- All reference files contain copy-paste code — agents should MODIFY, not reinvent
