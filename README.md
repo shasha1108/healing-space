@@ -1,6 +1,6 @@
 # Healing Space · 疗愈空间
 
-> **A Claude Code skill for generating touch-driven interactive healing webpages — GPU fluid simulation, WebGL shaders, p5.js organic rendering, and Web Audio synthesis, woven into emotional journeys that transform tension into peace.**
+> **A Claude Code skill for interactive-art and touch-design: generating touch-driven healing webpages with GPU fluid simulation, WebGL shader-art, p5.js organic rendering, and Web Audio synthesis. Creative-technology woven into emotional journeys that transform tension into peace.**
 > **一个面向 Claude Code 的交互式疗愈网页生成 skill —— 融合 GPU 流体模拟、WebGL 着色器、p5.js 有机渲染与 Web Audio 合成，将用户情绪转化为指尖可触的治愈旅程。**
 
 ---
