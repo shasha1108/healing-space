@@ -146,6 +146,7 @@ Claude Code skill for touch-driven interactive healing H5 — GPU fluid, WebGL s
 - [GEO/SEO Repository Optimization Guide](https://github.com/shasha1108/h5-publish-skill/blob/main/references/geo-seo-guide.md) — The complete playbook that informed this README's agent-facing structure
 - [Healing Visual Lab](https://github.com/shasha1108/healing-visual-lab) — Companion repo: 9 published interactive healing H5 works
 - [h5-publish skill](https://github.com/shasha1108/h5-publish-skill) — Automated H5 publishing pipeline with GEO optimization
+- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Xiaohongshu emotional content creation skill (same creator)
 
 ---
 
