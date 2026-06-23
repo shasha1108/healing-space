@@ -356,6 +356,7 @@ Action（用户怎么参与修复？）
 | **液态 3D / 气泡 / 无 mesh 空间** | **raymarching.md**（SDF + smin + Domain Warping） |
 | **WebGPU 百万粒子 / TSL 着色器** | **tsl-webgpu.md**（WebGPURenderer + Compute Shader + 降级策略） |
 | **精密音色 / 寺庙混响** | **audio-worklet.md**（AudioWorklet 颂钵 + ConvolverNode 空间混响） |
+| **像素画 / Frutiger Aero 玻璃美学** | **pixel-aero.md**（pixelDensity(1) + noSmooth + 毛玻璃 DOM 叠加） |
 
 > p5.js 做光轨/丝带/有机线条的效果 **远好于 Three.js 粒子**——`blendMode(SCREEN)` + 3层笔触叠加 + `pixelDensity()` 是 Three.js 无法替代的视觉优势。**不要因为 skill 里 Three.js 参考多就默认选它——让隐喻选技术，不是让习惯选技术。**
 
