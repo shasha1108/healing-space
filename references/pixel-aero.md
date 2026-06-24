@@ -1,5 +1,7 @@
 # Pixel × Frutiger Aero — 像素化的治愈万物
 
+> 📦 **此技法已独立为专属 skill：** [pixel-aero](https://github.com/shasha1108/pixel-aero) — 赛博养宠/养花/水族箱等玻璃容器像素生命体场景，请使用该 skill 获得更专注的生成体验。本文档在 healing-space 中保留作为技法参考。
+>
 > 覆盖 p5.js Canvas 像素渲染 + Frutiger Aero 玻璃美学结合的工业级技法配方。
 > 像素画的"颗粒温暖" + Frutiger Aero 的"清透光泽" = 童年玻璃弹珠里的另一个世界。
 > 适用于赛博养宠、赛博养花、电子水族箱等一切"玻璃容器内的像素生命体"场景。
