@@ -393,6 +393,9 @@ Action（用户怎么参与修复？）
 - [ ] **用了 Raymarching SDF**：场景里是单体/抽象几何体，**绝对没有**多个球体 smin 融合？（多球 smin = 肉球/器官恐怖感，无论颜色和参数，不可修复）
 - [ ] **有自定义光标**：CSS 用了 `* { cursor: none; }` 全局强制隐藏系统光标？（仅在 `body` 设置可能对动态插入的 `canvas` 不生效 → 出现双光标）
 - [ ] **自定义光标初始位置**：cursor div 初始有 `opacity: 0`，在首次 `mousemove` 时才设为 1？（否则光标出现在页面左上角，等同于出现两个光标）
+- [ ] **交互事件**：有单击/双击区分需求时，使用自定义 `pointerdown` + 时间差判断，不用 p5.js 内置双击事件（会先触发单击）
+- [ ] **CSS 层级**：使用了 `backdrop-filter: blur()` 时，Canvas 必须通过 JS 强控 `z-index` 夹在毛玻璃底板和透明外壳之间（Safari 的 stacking context bug）
+- [ ] **交互角色有状态机**：主体交互角色至少 3 个状态（idle / active / react），不同状态有不同的运动参数和动画反馈
 
 全部 ✅ 才交付。
 
