@@ -141,14 +141,13 @@ Claude Code skill for touch-driven interactive healing H5 — GPU fluid, WebGL s
 
 ---
 
-## 📖 References / 参考
+## 🔗 More from @shasha1108
 
-- [GEO/SEO Repository Optimization Guide](https://github.com/shasha1108/h5-publish-skill/blob/main/references/geo-seo-guide.md) — The complete playbook that informed this README's agent-facing structure
-- [Healing Visual Lab](https://github.com/shasha1108/healing-visual-lab) — Companion repo: 9 published interactive healing H5 works
-- [h5-publish skill](https://github.com/shasha1108/h5-publish-skill) — Automated H5 publishing pipeline with GEO optimization
-- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Xiaohongshu emotional content creation skill (same creator)
+| Repo | What |
+|------|------|
+| [healing-visual-lab](https://github.com/shasha1108/healing-visual-lab) | 交互式数字疗愈作品集——15 件 Three.js/WebGL 交互实验 |
+| [pixel-bloom](https://github.com/shasha1108/pixel-bloom) | 像素艺术 × 毛玻璃美学——赛博养宠、电子水族箱 |
+| [inner-voice](https://github.com/shasha1108/inner-voice) | 小红书情绪内容创作——隐喻挖掘、场景写作、视觉叙事 |
+| [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) | 一键发布 H5 到 GitHub Pages——拖入文件夹即上线 |
 
----
-
-
-<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>*Maintained by [云野自由](https://github.com/shasha1108) · v8.0.0 · MIT License*
+<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> · Maintained by <a href="https://github.com/shasha1108">@shasha1108</a></sub></p>
