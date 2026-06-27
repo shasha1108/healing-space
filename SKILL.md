@@ -33,6 +33,10 @@ metadata:
 
 **你产出的不是"一个能跑的H5页面"。你产出的是"一段能用指尖触碰的情绪旅程"。**
 
+**最终交付物：** 单文件 HTML，顶部必须有元数据头（Title / Summary / Tech / Keywords / Render / Audio / Touch / Repo）。自包含——CDN 只载 p5.js / Three.js，其余全部内联。详细格式见下方"输出格式"章节。
+
+> **SKILL.md 硬上限：500 行。** 超出即推入 references/。原则声明留在 SKILL.md，执行细节在 references。
+
 ## 创作哲学
 
 ```
@@ -296,8 +300,12 @@ complete  → "它过去了。你在这里。"（见证）
 
 ### 四、流畅质感 — 平滑即品质
 
+> **Always Lerp. Never linear. Lerp = organic = healing. Linear = mechanical = alienating.**
+> 
+> 这不是技术选择——这是疗愈感的来源。线性赋值是机器在操作。Lerp 是水在托住你。如果只记住一条技术规则，记住这一条。
+
 **Lerp（线性插值）——决定"质感"的算法：**
-一切过渡都用 lerp，不用线性赋值。线性 = 机械；lerp = 有机。
+一切过渡都用 lerp，不用线性赋值。
 
 ```javascript
 // 差：生硬
@@ -406,25 +414,33 @@ Action（用户怎么参与修复？）
 
 ### 第三步：让物理过程选技术路线
 
-不同的物理过程天然对应不同的技术：
+按以下决策树走——**不要跳过问题，不要同时走两条路。** 每一步的答案为"是"就进入对应技术，答案为"否"就继续下一个问题。
 
-| 物理过程 | 技术 | 为什么 |
-|---------|------|--------|
-| 墨水在水中扩散→被擦拭 | **FBO 流体模拟**（gpu-fluid.md） | 扩散+擦拭=流体物理过程，天然同构 |
-| 外壳剥落→露出内核 | **Three.js 粒子** + 重力 + 弹簧 | 壳是物理结构，剥落需要刚体感 |
-| 沙子被梳理成同心圆 | **Three.js 粒子** + 拖拽力场 | 梳理=交互力场扰动+归位 |
-| 终端弹窗→炸碎清空 | **CSS + GSAP** | 弹窗是 DOM 元素，炸碎=stagger animation |
-| 毛笔在纸上写字 | **p5.js flow field** | 笔触=noise 抖动 + curveVertex |
-| 焦虑图案→结晶秩序 | **Reaction-Diffusion**（reaction-diffusion.md） | Turing 模式天然是"混沌→有序"的物理过程 |
-| 孤独粒子→自发连网 | **Physarum 粘菌网络**（physarum.md） | 粒子在信息素引导下自发连成网=连接的涌现 |
-| 流体/气泡/溶融/穿越 | **Raymarching SDF**（raymarching.md）⚠️ 见下方禁用警告 | 无需 mesh，fragment shader 内构建完整 3D |
+```
+隐喻的物理过程是什么？
 
-> ⚠️ **Raymarching 禁用组合（验证为 Body Horror，不可修复）**
-> - **多个 sdSphere + smin 融合**：无论颜色/参数，smin 合并多球 = 生物组织合并感，用户必然联想到"肉球/器官"。
-> - **球体 + 域扭曲强度 > 0.15**：球面褶皱 = 皮肤/肌肉纹理，越强越像尸体/肿瘤。
-> - **暗棕金/暖橙色 + 任何 SDF 几何体**：此配色在精准光照渲染下 100% 联想到有机组织。
->
-> **安全用法**：单体抽象 SDF（一个环/管道）+ 极光类域扭曲背景（不含几何体）。见 **raymarching.md §禁用区**。
+├─ 是流体/液体/气体？（扩散、渗透、染色、流动）
+│  ├─ 含擦拭/推开/搅动等用户交互？ → FBO 流体模拟（gpu-fluid.md）
+│  └─ 纯流动/无交互/穿越感 → Raymarching SDF（raymarching.md）
+│     ⚠️ 球体+smin=禁止。只允许单体抽象+极光背景
+│
+├─ 是固体结构的变化？（剥落、碎裂、崩塌、重组）
+│  └─ → Three.js 粒子 + 重力/弹簧/力场
+│
+├─ 是从无序到有序的转换？（混沌→结晶、随机→规律）
+│  ├─ 空间图案（斑点、条纹、迷宫） → Reaction-Diffusion（reaction-diffusion.md）
+│  └─ 网络连接（粒子自发连成网） → Physarum（physarum.md）
+│
+├─ 是平面/屏幕上的事件？（弹窗、文字、界面被破坏）
+│  └─ → CSS + GSAP（DOM 元素，stagger animation）
+│
+├─ 是手工痕迹/笔触/丝带/光轨？（有机线条、有手工感的运动）
+│  └─ → p5.js flow field + curveVertex（p5-patterns.md）
+│
+└─ 无法归类？ → Three.js 粒子（最通用，先做粒子原型）
+```
+
+> ⚠️ **Raymarching 禁用组合（验证为 Body Horror，不可修复）**：多球 smin 融合 / 球体+域扭曲>0.15 / 暗棕金+任何 SDF。安全用法：单体抽象 + 极光背景。详见 **raymarching.md §禁用区**。
 
 **技术是手段，物理过程才是内容。你选的技术的物理过程 = 你表达的情绪过程。**
 
@@ -447,22 +463,24 @@ Action（用户怎么参与修复？）
 
 ### 第五步：应用四大维度 + 按需加载技法
 
-| 隐喻指向... | Read |
-|------------|------|
-| 3D粒子构成的实体 | shader-patterns.md + particle-physics.md |
-| 流体/液体/气体 | gpu-fluid.md + shader-patterns.md §八 |
-| **手工/有机/笔触/光轨/萤火虫** | **p5-patterns.md**（含多层笔触 §4 + SCREEN 混合） |
-| 平面/屏幕/纸张 | css-aesthetic.md |
-| **疗愈类音频叙事** | **audio-engine.md**（含五声音阶 §十一 + 双态声场） |
-| **交互模式（长按/拖拽/点击）** | **state-machine.md**（模式 G 长按安抚 §14 + 高潮触发设计 §15） |
-| 结构骨架/代码组织 | assets/golden-example.html |
-| **Turing 图案 / 焦虑→结晶** | **reaction-diffusion.md**（Gray-Scott + 情绪参数配方） |
-| **粘菌网络 / 孤独→连接** | **physarum.md**（信息素网络 + 孤独/连接参数调优） |
-| **液态 3D / 气泡 / 无 mesh 空间** | **raymarching.md**（SDF + smin + Domain Warping） |
-| **WebGPU 百万粒子 / TSL 着色器** | **tsl-webgpu.md**（WebGPURenderer + Compute Shader + 降级策略） |
-| **精密音色 / 寺庙混响** | **audio-worklet.md**（AudioWorklet 颂钵 + ConvolverNode 空间混响） |
-| **像素画 / Frutiger Aero 玻璃美学** | **pixel-aero.md**（pixelDensity(1) + noSmooth + 毛玻璃 DOM 叠加） |
-| **情绪色板选择** | **color-palettes.md**（5 套命名色板 + 适用情绪 + 人格描述） |
+> **加载纪律**：按列出的时机精确加载——"必读"= 读完整文件，"翻阅"= 找到需要的章节即可，不要读完。References 是工具箱，不是教材。
+
+| 隐喻指向... | Read | 加载方式 |
+|------------|------|---------|
+| 3D粒子构成的实体 | shader-patterns.md + particle-physics.md | **必读全部** — 生成前读完 |
+| 流体/液体/气体 | gpu-fluid.md + shader-patterns.md §八 | **必读全部** — 生成前读完 |
+| **手工/有机/笔触/光轨/萤火虫** | **p5-patterns.md**（含多层笔触 §4 + SCREEN 混合） | **必读全部** — 生成前读完 |
+| 平面/屏幕/纸张 | css-aesthetic.md | **必读全部** — 生成前读完 |
+| **疗愈类音频叙事** | **audio-engine.md**（含五声音阶 §十一 + 双态声场） | **必读全部** — 音效设计前 |
+| **交互模式（长按/拖拽/点击）** | **state-machine.md**（模式 G 长按安抚 §14 + 高潮触发设计 §15） | **翻阅** — 交互设计时查模式 |
+| 结构骨架/代码组织 | assets/golden-example.html | **必读（作为模板起点）** |
+| **Turing 图案 / 焦虑→结晶** | **reaction-diffusion.md**（Gray-Scott + 情绪参数配方） | **必读全部** — 生成前读完 |
+| **粘菌网络 / 孤独→连接** | **physarum.md**（信息素网络 + 孤独/连接参数调优） | **必读全部** — 生成前读完 |
+| **液态 3D / 气泡 / 无 mesh 空间** | **raymarching.md**（SDF + smin + Domain Warping） | **必读全部（⚠️ 包括禁用区）** |
+| **WebGPU 百万粒子 / TSL 着色器** | **tsl-webgpu.md**（WebGPURenderer + Compute Shader + 降级策略） | **必读全部** — 生成前读完 |
+| **精密音色 / 寺庙混响** | **audio-worklet.md**（AudioWorklet 颂钵 + ConvolverNode 空间混响） | **必读全部** — 音效设计前 |
+| **像素画 / Frutiger Aero 玻璃美学** | **pixel-aero.md**（pixelDensity(1) + noSmooth + 毛玻璃 DOM 叠加） | **必读全部** — 生成前读完 |
+| **情绪色板选择** | **color-palettes.md**（5 套命名色板 + 适用情绪 + 人格描述） | **翻阅** — 选色板时查人格+色值即可 |
 
 > p5.js 做光轨/丝带/有机线条的效果 **远好于 Three.js 粒子**——`blendMode(SCREEN)` + 3层笔触叠加 + `pixelDensity()` 是 Three.js 无法替代的视觉优势。**不要因为 skill 里 Three.js 参考多就默认选它——让隐喻选技术，不是让习惯选技术。**
 
@@ -499,6 +517,8 @@ Action（用户怎么参与修复？）
 不是"它通过了吗"，而是"它完整了吗"。
 
 ## 质量自检
+
+> **Assume there are problems. Your job is to find them.** 如果初查找到 0 个问题——你看得不够仔细。问题不是"有没有"，是"在哪"。
 
 - [ ] 这个作品的隐喻是什么？能一句话说清"我在做______"吗？
 - [ ] 场景有 FogExp2 或等效的深度氛围吗？
