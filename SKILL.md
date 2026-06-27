@@ -190,6 +190,29 @@ function updateCursor() {
 - 空心圆环：`border: 1px solid rgba(255,255,255,0.5); background: transparent;` + 呼吸动画
 - 粒子拖尾：每帧在光标位置 spawn 3~5 个小粒子，粒子自行衰减消失
 
+**⚠️ 双光标 Bug 修复（必做）：**
+
+`cursor: none` 只设在 `body` 上，对 JS 动态插入的 `canvas`（position:fixed）在某些浏览器中不生效——导致系统光标和自定义光标同时可见。同时，自定义光标 div 初始在 `left:0, top:0`，在用户移动鼠标前已可见，等同于出现两个光标。三选一不够，三条必须同时做：
+
+```css
+/* 1. 全局强制隐藏系统光标（不仅是 body） */
+* { cursor: none !important; }
+```
+
+```css
+/* 2. 自定义光标初始不可见 */
+#spirit-cursor { opacity: 0; }
+```
+
+```javascript
+/* 3. 首次 mousemove 才显示并初始化位置 */
+document.addEventListener('mousemove', e => {
+  spiritCursor.style.opacity = '1';
+  cursor.targetX = e.clientX;
+  cursor.targetY = e.clientY;
+}, { once: true });
+```
+
 **⚠️ 防坑：色彩疗愈 + 字体权重 + 空间关系**
 
 - **色彩铁律**：死黑 `#000`→深灰渐变（有空气感）。高饱和暖金 vs 暗紫 = 星际战争→低饱和珍珠白/浅青 vs 灰蓝（沉淀的杂念，不是邪恶的毒药）。`AdditiveBlending`→中心过曝刺眼→`NormalBlending` + fragment shader 用 `smoothstep` 而非 `pow` 做边缘衰减。**判断标准：配色方案本身是一张静态色卡——它让人想深呼吸，还是想防御？**
