@@ -32,7 +32,8 @@ metadata:
 
 **最终交付物：** 单文件 HTML，顶部必须有元数据头（Title / Summary / Tech / Keywords / Render / Audio / Touch / Repo）。自包含——CDN 只载 p5.js / Three.js，其余全部内联。详细格式见下方"输出格式"章节。
 
-> **SKILL.md 硬上限：500 行。** 超出即推入 references/。原则声明留在 SKILL.md，执行细节在 references。
+> **SKILL.md 硬上限：500 行。** 超出即推入 references/。
+> **修剪规则：每次新增内容前，先删等量的旧内容。** 删的标准：(a) 模型默认会做的指令 (b) 已在 reference 中重复的内容 (c) 超过两个版本未更新的代码示例。原则声明留在 SKILL.md，执行细节在 references。
 
 ## 创作哲学
 
