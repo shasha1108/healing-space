@@ -268,6 +268,21 @@ document.addEventListener('mousemove', e => {
 - **字重**：200（极细），不是 300/400。"轻盈"是字重给的。**文字阴影**：不用黑色 `text-shadow`（墓碑铭文感）。用极微弱的白色发光或干脆不用。
 - **文字与视觉的空间关系是双向调整**：粒子体给文字让路（如 `points.position.y = 10` 上移）+ 文字有毛玻璃底衬 `backdrop-filter: blur(6px)` 保护可读性。不要只移文字、也不要只移粒子——两边同时让。
 
+**⚠️ AI 痕迹排除清单（每一条都可逐项检查）：**
+
+以下 8 条是 AI 生成 H5 最常见的视觉指纹——**触犯一条即退回修改**：
+
+| # | AI 痕迹 | 修复 |
+|---|---------|------|
+| 1 | 标题下方有横线/装饰线 | 用留白或背景色差替代——线是 AI 的默认签名 |
+| 2 | 大面积居中布局 | 左对齐或非对称——居中 = AI 不知道放哪 |
+| 3 | 纯黑 `#000` 或纯白 `#FFF` 色块 | 最深用 `#0a1628`，最亮用 `#f4f0e8`——纯色没有空气 |
+| 4 | 系统字体（Arial/Inter/Roboto） | 宋体是默认，隐喻可另选——但绝不退回到系统字体 |
+| 5 | 固体色背景无层次 | FogExp2 / 渐变 / 粒子拖影——背景必须有深度 |
+| 6 | 文字无字间距（`letter-spacing: 0` 或 normal） | 最少 8px——没有字间距就没有呼吸 |
+| 7 | 粒子均匀散布无结构 | Curl Noise + 密度梯度——均匀 = 随机 = 没有意图 |
+| 8 | 交互反馈是"弹窗/提示框" | 反馈必须是微妙的粒子变化、光晕变化、颜色变化——不是 UI 控件 |
+
 ---
 
 ### 三、心理疗愈 — 文字与节奏
@@ -486,7 +501,8 @@ Action（用户怎么参与修复？）
 
 ## 输出格式
 
-单文件 HTML。顶部必须有元数据头：
+单文件 HTML。顶部必须有两种元数据——**人可读的注释 + 机器可解析的 JSON**：
+
 ```html
 <!--
   Title: [作品名]
@@ -499,7 +515,24 @@ Action（用户怎么参与修复？）
   Dependencies: [N个]
   Repo: https://github.com/shasha1108/healing-visual-lab
 -->
+<script type="application/json" id="healing-metadata">
+{
+  "title": "[作品名]",
+  "summary": "[一句话描述隐喻和体验]",
+  "tech": "[技术栈]",
+  "keywords": ["关键词1", "关键词2"],
+  "render": "[WebGL|Canvas2D|CSS]",
+  "audio": true,
+  "touch": true,
+  "dependencies": 3,
+  "repo": "https://github.com/shasha1108/healing-visual-lab",
+  "generated_by": "healing-space",
+  "generated_at": "[ISO 8601 timestamp]"
+}
+</script>
 ```
+
+JSON 块的 key 与注释头一一对应——**人读注释，机器读 JSON**。h5-publish 索引重建时直接解析 `#healing-metadata` 提取结构化数据。
 
 ## 二次精修（在质量检查之前）
 
