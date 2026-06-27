@@ -2,15 +2,12 @@
 name: healing-space
 license: MIT
 description: >
-  Use this skill when a user asks you to build an interactive webpage driven by their
-  touch — clicking, tapping, or dragging — where the goal is emotional release, stress
-  relief, or calm. The user tells you how they feel (焦虑, 疲惫, 难过, 愤怒, 失恋,
-  stressed, anxious, sad, angry, heartbroken) and wants a standalone HTML page where
-  their interaction transforms visuals and sound from tension toward peace. Also covers:
-  治愈网页, 枯山水禅意交互, 颂钵疗愈, 正念冥想, immersive sound baths, zen sand gardens,
-  and emotional release interactive art. Do NOT use for data charts, static layouts,
-  celebration/firework effects, framework-specific UI (React, Vue, 小程序), or
-  text-only content.
+  Build interactive, touch-driven healing webpages for emotional release. Triggered when a user
+  describes an emotional state (焦虑, stressed, 疲惫, angry, heartbroken) and wants a standalone
+  HTML page where interaction drives a visual metaphor from tension toward peace.
+  Covers: 治愈, zen sand garden, sound bath, emotional release art.
+  Do NOT trigger for: data dashboards, celebration/firework effects, framework-specific UI
+  (React, Vue, 小程序), text-only content.
 metadata:
   author: 云野自由
   version: "8.0.0"
