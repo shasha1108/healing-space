@@ -110,35 +110,10 @@ metadata:
 2. **第二层（粒子/主体）：** 入场完成后 0.5s，粒子系统开始淡入或从边缘涌入——主角登场
 3. **第三层（文字/UI）：** 粒子就位后 0.5s，引导文字淡入——"这就是你现在的感受"
 
-```javascript
-const ENTRY = { BG: 0, PARTICLES: 0.5, TEXT: 1.0 }; // 各层延迟（秒）
-let entryElapsed = 0;
-function entrySequence(dt) {
-  entryElapsed += dt;
-  if (entryElapsed > ENTRY.BG) startBackgroundEntry(dt);
-  if (entryElapsed > ENTRY.PARTICLES) startParticleEntry(dt);
-  if (entryElapsed > ENTRY.TEXT) showIntroText();
-}
-```
+> 入场序列 + Dolly Zoom 代码骨架 → `references/code-snippets.md §入场序列` + `§DollyZoom`
 
 - **Dolly Zoom（希区柯克变焦）**：相机从极远处（`z=500+`）在 2~3 秒内平滑推近到工作距离（`z=150~200`），同时 FOV 从广角收窄到标准，产生"空间压缩"的沉浸入口
 - **Orbit 旋转入场**：相机从侧方（`position.z=150, x=80`）绕 Y 轴旋转到正面，持续 2~3 秒，让观众"发现"场景
-
-```javascript
-// Dolly Zoom 入场示例
-const entryDuration = 2.5; // 秒
-let entryProgress = 0;
-
-function entryDollyZoom(dt) {
-    if (entryProgress >= 1) return;
-    entryProgress = Math.min(1, entryProgress + dt / entryDuration);
-    const t = easeInOutCubic(entryProgress);
-    camera.position.z = 500 - 340 * t;    // 500 → 160
-    camera.fov = 90 - 40 * t;             // 90° → 50°
-    camera.updateProjectionMatrix();
-}
-function easeInOutCubic(x) { return x < 0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; }
-```
 
 **视觉高潮（关键时刻爆发）：**
 高强度的脉冲、闪烁、粒子爆发**只在两个时刻出现**——
@@ -176,60 +151,17 @@ function easeInOutCubic(x) { return x < 0.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; 
 > 宋体自带"文学属性"和"呼吸感"——它的笔画粗细变化本身就是一种节奏。细黑体是安全的第二选择，但宋体永远是首选。
 
 **字号与间距（决定高级感的关键）：**
-```css
-.title {
-    font-size: clamp(20px, 4vw, 28px);   /* 不大，保持精致 */
-    letter-spacing: 10px;                 /* 核心！拉开字间距 = 通透 */
-    font-weight: 200;
-}
-.subtitle {
-    font-size: clamp(12px, 2.4vw, 17px); /* = 标题 × 60% */
-    letter-spacing: 10px;
-    font-weight: 200;
-    opacity: 0.65;
-}
-.hint {
-    font-size: clamp(11px, 1.8vw, 14px);
-    letter-spacing: 15px;                /* 提示文字间距最大 */
-    opacity: 0.45;
-}
-```
 
-> 字间距 10~15 是"高级感"和"普通"的分界线。拉开的字距让画面通透、安静、有留白——这正是疗愈类作品需要的呼吸感。
+> 代码骨架 → `references/code-snippets.md §字体系统`
+
+> 字间距 10~15 是"高级感"和"普通"的分界线。
 
 **光标设计（必做）：**
-默认箭头光标 → 替换为自定义视觉锚点。它不只是指针，它是用户在这个世界里的"化身"：
+默认箭头光标 → 替换为自定义视觉锚点。它不只是指针，它是用户在这个世界里的"化身"。
 
-```css
-#spirit-cursor {
-    position: fixed;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,210,255,0.6) 40%, transparent 70%);
-    mix-blend-mode: screen;
-    pointer-events: none; z-index: 999;
-    /* JS 驱动 transform，不用 left/top（性能更好） */
-}
-```
+> 代码骨架 → `references/code-snippets.md §光标系统`（CSS + Lerp 跟随 + 双光标修复 + 变体选项）
 
-```javascript
-// Lerp 平滑跟随——液态/悬浮的延迟感
-const cursor = { x: 0, y: 0, targetX: 0, targetY: 0 };
-
-document.addEventListener('mousemove', e => {
-    cursor.targetX = e.clientX;
-    cursor.targetY = e.clientY;
-});
-
-function updateCursor() {
-    const lerpFactor = 0.12;  // 0.08=更悬浮, 0.2=更跟手
-    cursor.x += (cursor.targetX - cursor.x) * lerpFactor;
-    cursor.y += (cursor.targetY - cursor.y) * lerpFactor;
-    spiritCursor.style.transform = `translate(${cursor.x - 10}px, ${cursor.y - 10}px)`;
-}
-```
-
-> `lerpFactor = 0.08~0.15`：越小越像在水中、越大越跟手。移动端（<768px）隐藏自定义光标。
+`lerpFactor = 0.08~0.15`：越小越像在水中、越大越跟手。移动端（<768px）隐藏自定义光标。
 
 **光标变体（按隐喻选择）：**
 - 发光光点（默认）：圆形 radial-gradient
@@ -238,26 +170,9 @@ function updateCursor() {
 
 **⚠️ 双光标 Bug 修复（必做）：**
 
-`cursor: none` 只设在 `body` 上，对 JS 动态插入的 `canvas`（position:fixed）在某些浏览器中不生效——导致系统光标和自定义光标同时可见。同时，自定义光标 div 初始在 `left:0, top:0`，在用户移动鼠标前已可见，等同于出现两个光标。三选一不够，三条必须同时做：
+`cursor: none` 只设在 `body` 上，对 JS 动态插入的 `canvas`（position:fixed）在某些浏览器中不生效——导致系统光标和自定义光标同时可见。同时，自定义光标 div 初始在 `left:0, top:0`，在用户移动鼠标前已可见，等同于出现两个光标。三选一不够，三条必须同时做。
 
-```css
-/* 1. 全局强制隐藏系统光标（不仅是 body） */
-* { cursor: none !important; }
-```
-
-```css
-/* 2. 自定义光标初始不可见 */
-#spirit-cursor { opacity: 0; }
-```
-
-```javascript
-/* 3. 首次 mousemove 才显示并初始化位置 */
-document.addEventListener('mousemove', e => {
-  spiritCursor.style.opacity = '1';
-  cursor.targetX = e.clientX;
-  cursor.targetY = e.clientY;
-}, { once: true });
-```
+> 修复代码骨架 → `references/code-snippets.md §光标系统·双光标`
 
 **⚠️ 防坑：色彩疗愈 + 字体权重 + 空间关系**
 
@@ -319,13 +234,7 @@ complete  → "它过去了。你在这里。"（见证）
 **Lerp（线性插值）——决定"质感"的算法：**
 一切过渡都用 lerp，不用线性赋值。
 
-```javascript
-// 差：生硬
-camera.position.z = targetZ;
-
-// 好：有机
-camera.position.z += (targetZ - camera.position.z) * 0.05;
-```
+> 代码骨架 → `references/code-snippets.md §Lerp`
 
 应用位置：
 - 光标跟随：`cursor += (target - cursor) * 0.12`
@@ -486,6 +395,7 @@ Action（用户怎么参与修复？）
 | **疗愈类音频叙事** | **audio-engine.md**（含五声音阶 §十一 + 双态声场） | **必读全部** — 音效设计前 |
 | **交互模式（长按/拖拽/点击）** | **state-machine.md**（模式 G 长按安抚 §14 + 高潮触发设计 §15） | **翻阅** — 交互设计时查模式 |
 | 结构骨架/代码组织 | assets/golden-example.html | **必读（作为模板起点）** |
+| **通用代码骨架（光标/字体/入场/Lerp）** | **code-snippets.md**（§光标系统 / §字体系统 / §入场序列 / §DollyZoom / §Lerp） | **必读全部** — 生成前读完 |
 | **Turing 图案 / 焦虑→结晶** | **reaction-diffusion.md**（Gray-Scott + 情绪参数配方） | **必读全部** — 生成前读完 |
 | **粘菌网络 / 孤独→连接** | **physarum.md**（信息素网络 + 孤独/连接参数调优） | **必读全部** — 生成前读完 |
 | **液态 3D / 气泡 / 无 mesh 空间** | **raymarching.md**（SDF + smin + Domain Warping） | **必读全部（⚠️ 包括禁用区）** |
