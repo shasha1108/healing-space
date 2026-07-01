@@ -103,6 +103,8 @@ if (sminCalls > 0) issues.push(`FATAL: ${sminCalls} smin() calls — multi-spher
 console.log(issues.length ? issues.join('\n') : 'All checks passed');
 ```
 
+> **补充验证（UI 侧）**：上述 JS 脚本检查代码层安全（语法/API/着色器）。完成后运行 `python3 scripts/validate.py <output.html>` 补充验证 UI 层质量信号——光标隐藏、字体族、letter-spacing、音频频率/gain 合规。两个检查器互补：JS 查代码安全，Python 查 UI 正确性。
+
 ---
 
 ## 三、第一性原理创作流程
@@ -188,7 +190,7 @@ function getOutputColor(inputs) {
 
 **关键纪律**：
 1. `DEBUG_LAYER` 是代码常量——不是 UI 开关、不是键盘快捷键
-2. AI 在视觉验证阶段（STEP 4.9）手动修改 `DEBUG_LAYER` 的值，逐层截图对比
+2. AI 在视觉验证阶段（STEP 8）手动修改 `DEBUG_LAYER` 的值，逐层截图对比
 3. 全部验证通过后，**整个调试 if-else 块删除**——不给最终用户任何调试入口
 4. 不在 p5.js 的 `draw()` 循环中放调试逻辑——调试期间的性能下降可接受，但交付时不允许残留
 
@@ -249,10 +251,10 @@ function drawDebugOverlay(debugLayer) {
 
 **⚠️ p5.js 调试覆盖层的性能注意事项**：
 - `loadPixels()`/`updatePixels()` 在每帧调用会显著降帧（~30%）
-- 调试覆盖层仅在 STEP 4.9 视觉验证时开启——验证完关闭
+- 调试覆盖层仅在 STEP 8 视觉验证时开启——验证完关闭
 - 像素遍历（`for x / for y`）在调试噪声场时使用——这是验证步骤，不要求 60fps
 
-### 4.5 调试验证 SOP（STEP 4.9 的一部分）
+### 4.5 调试验证 SOP（STEP 8 的一部分）
 
 在视觉验证 7 步序列之前，先用调试视图逐层验证：
 

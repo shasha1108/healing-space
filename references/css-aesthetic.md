@@ -143,20 +143,13 @@ body {
 
 ## 四、定制光标 + 光环
 
-增强交互的"仪式感"——光标变成一个发光的球体，按压时放大变色：
+> 光标基础实现（CSS + Lerp 跟随 + 双光标修复）→ **code-snippets.md §光标系统**。本节仅补充 CSS 特化的光环和按压态视觉效果。
+
+增强交互的"仪式感"——光标变成一个发光的球体，按压时放大变色。光环是 CSS 独有的"光标周围呼吸光晕"——p5.js/Three.js 场景中不适用。
+
+**光环动画：**
 
 ```css
-#spirit-cursor {
-    position: fixed;
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(100,200,255,0.8) 40%, transparent 70%);
-    mix-blend-mode: screen;
-    pointer-events: none;
-    z-index: 100;
-    transform: translate(-50%, -50%);
-}
-
 #spirit-halo {
     position: fixed;
     width: 48px; height: 48px;
@@ -174,23 +167,21 @@ body {
 }
 ```
 
-```javascript
-// JS 驱动光标跟随 + 按压态变化
-document.addEventListener('mousemove', e => {
-    cursor.style.left = e.clientX + 'px';
-    cursor.style.top  = e.clientY + 'px';
-    halo.style.left   = e.clientX + 'px';
-    halo.style.top    = e.clientY + 'px';
-});
+**按压态（光环变色）：**
 
+```javascript
 function onPressStart() {
-    cursor.style.width = '40px'; cursor.style.height = '40px';
-    cursor.style.background = 'radial-gradient(circle, #fff 0%, rgba(255,215,0,0.8) 40%, transparent 70%)';
+    cursorEl.style.width = '40px'; cursorEl.style.height = '40px';
+    cursorEl.style.background = 'radial-gradient(circle, #fff 0%, rgba(255,215,0,0.8) 40%, transparent 70%)';
     halo.style.borderColor = 'rgba(255,215,0,0.5)';
+}
+function onPressEnd() {
+    cursorEl.style.width = '20px'; cursorEl.style.height = '20px';
+    cursorEl.style.background = 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,210,255,0.6) 40%, transparent 70%)';
 }
 ```
 
-> 移动端隐藏（`if(window.innerWidth < 768) return`）——触屏没有光标概念。
+> 移动端（`window.innerWidth < 768`）隐藏自定义光标。
 
 ---
 
@@ -301,25 +292,7 @@ function onPressStart() {
 
 ## 八、自定义光标体系（Visual Anchor Cursor）
 
-### 基础：Lerp 液态跟随
-
-```javascript
-const cursor = { x: window.innerWidth/2, y: window.innerHeight/2, targetX: 0, targetY: 0 };
-const LERP = 0.12; // 0.08=悬浮感, 0.15=跟手感, 0.2=接近即时
-
-document.addEventListener('mousemove', e => {
-    cursor.targetX = e.clientX;
-    cursor.targetY = e.clientY;
-});
-
-function updateCursor() {
-    cursor.x += (cursor.targetX - cursor.x) * LERP;
-    cursor.y += (cursor.targetY - cursor.y) * LERP;
-    el.style.transform = `translate(${cursor.x - elW/2}px, ${cursor.y - elH/2}px)`;
-}
-```
-
-> 关键：用 `transform` 而非 `left/top`（GPU 加速），Lerp 因子 0.08~0.15。
+> 光标基础实现（CSS + Lerp 跟随 + 双光标修复）→ **code-snippets.md §光标系统**。本节保留 CSS 场景专属的三种光标形态完整代码 + 按压态视觉效果。
 
 ### 三种光标形态（按隐喻选择）
 
@@ -363,4 +336,3 @@ function onPressEnd() {
 ```
 
 > 移动端（`window.innerWidth < 768`）隐藏自定义光标。
-| 信息过载 | 噪点 overlay + flicker 动画 | 模拟故障电子设备 |

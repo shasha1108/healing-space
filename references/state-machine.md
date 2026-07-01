@@ -10,11 +10,19 @@
 - [二、交互如何推动 calm](#二交互如何推动-calm)（模式 A 长按 / B 点击释放 / C 拖拽梳理 / D 静止心流）
 - [三、calm 驱动一切（总线）](#三calm-如何驱动一切视听联觉的总线)
 - [四、阶段切换的文案与 UI](#四阶段切换的文案与-ui叙事感来源)
-- [5. 相机动力学](#5-相机动力学被严重低估的沉浸感来源)
-- [6. 4-7-8 呼吸引导](#6-4-7-8-呼吸引导治愈达成后的留白仪式)
-- [7. 进阶：可逆 vs 不可逆](#7-进阶可逆-vs-不可逆决定体验的重量感)
-- [8. 避免的坑](#8-避免的坑)
+- [五、相机动力学](#五相机动力学被严重低估的沉浸感来源)
+- [六、自动运镜入场](#六自动运镜入场页面加载时必做)
+- [七、4-7-8 呼吸引导](#七-4-7-8-呼吸引导治愈达成后的留白仪式)
+- [八、进阶：可逆 vs 不可逆](#八进阶可逆-vs-不可逆决定体验的重量感)
+- [九、避免的坑](#九避免的坑)
+- [十、文案递进模式](#十文案递进模式subtitle-progression)
+- [十一、文案节奏与视觉高潮同步](#十一文案节奏与视觉高潮同步)
+- [十二、交互模式 E：拖拽操控时间](#十二交互模式-e拖拽操控时间drag-to-manipulate-time)
+- [十三、交互模式 F：定时自动疗愈](#十三交互模式-f定时自动疗愈timed-auto-healing)
+- [十四、交互模式 G：长按安抚](#十四交互模式-g长按安抚最推荐用于疗愈类)
+- [十五、高潮触发条件设计](#十五高潮触发条件设计反模式对照)
 - [速查：主题 → 状态机配置](#速查主题--状态机配置)
+- [速查新增](#速查新增)
 
 ---
 
@@ -200,7 +208,7 @@ function updateUI(phase) {
 
 ---
 
-## 五、UI 层的 CSS（极简、不打扰）
+### UI 层的 CSS（极简、不打扰）
 
 ```css
 #ui-layer {
@@ -236,7 +244,7 @@ function updateUI(phase) {
 
 ---
 
-## 5. 相机动力学（被严重低估的沉浸感来源）
+## 五、相机动力学（被严重低估的沉浸感来源）
 
 archetype《释·茧》验证了一个关键事实：**相机本身就该参与叙事**。焦虑时相机轻微抖动（强化"不安"），治愈时缓慢拉远（"退一步欣赏"）。这点几乎没人做，但效果立竿见影：
 
@@ -260,273 +268,7 @@ function updateCamera(time) {
 
 > 调参要点：`shake` 系数 `0.3~0.8`；频率用两个**互质**的数（如 20 和 23），否则抖动会周期性同步，显得假。治愈态拉远的 target `200` 比初始 `160` 远约 25%，足够明显但不至于看不清。
 
-## 6. 4-7-8 呼吸引导（治愈达成后的"留白"仪式）
-
-archetype《释·茧》的做法：治愈达成（`calm>=1`）后**不结束**，而是进入一段持续的 4-7-8 呼吸引导——吸气 4 秒、屏息 7 秒、呼气 8 秒，共 19 秒一个周期。这是真实的临床放松法，让治愈不只是"到达"，而是"持续沉浸"。
-
-```javascript
-// 全局状态加一个 breathePhase 记录当前在哪个阶段
-const breatheHint = document.getElementById('breathe-hint');
-
-function computeBreathe(time) {
-    if (!State.healed) return 0;          // 未治愈不引导
-    const cycle = time % 19;              // 4 + 7 + 8 = 19s
-
-    if (cycle < 4) {
-        // 吸气 0→1
-        if (State.breathePhase !== 1) {
-            breatheHint.innerText = '吸气 ···';
-            State.breathePhase = 1;
-            Audio.strikeBowl(0.8);        // 开始吸气时轻敲颂钵
-        }
-        return cycle / 4;
-    } else if (cycle < 11) {
-        // 屏息 保持在 1
-        if (State.breathePhase !== 2) {
-            breatheHint.innerText = '屏息 ···';
-            State.breathePhase = 2;
-        }
-        return 1.0;
-    } else {
-        // 呼气 1→0
-        if (State.breathePhase !== 3) {
-            breatheHint.innerText = '呼气 ···';
-            State.breathePhase = 3;
-            Audio.strikeBowl(0.4);        // 呼气时再轻敲一次，释放压力
-        }
-        return 1.0 - (cycle - 11) / 8;
-    }
-}
-```
-
-`breathe` 这个 0~1 的值用途极广（这是视听联觉的高阶用法）：
-1. 传给 shader 的 `uBreathe` uniform → 粒子大小随呼吸起伏（吸气变大、呼气变小）
-2. 传给 `Audio.update(calm, breathe)` → 海浪噪音的音量和滤波器跟随呼吸开合（吸气=浪起、呼气=浪落）
-3. 驱动呼吸文字的 `transform: scale()` + `opacity` → 文字本身随吸气微微变大变亮，视觉引导更强
-
-```javascript
-// 呼吸文字跟随呼吸（在主循环里，State.showBreathUI 在治愈后 3 秒才置 true，留个停顿）
-if (State.showBreathUI) {
-    const s = 1.0 + breathe * 0.15;
-    breatheHint.style.transform = `scale(${s})`;
-    breatheHint.style.opacity = 0.3 + breathe * 0.7;
-}
-```
-
-> **颂钵敲击时机**：不是匀速敲，而是卡在呼吸的"转换点"——吸气开始时强敲(0.8)、呼气开始时弱敲(0.4)。这让声音成为呼吸的"节拍器"，比任何视觉提示都有效。
-
-## 7. 进阶：可逆 vs 不可逆（决定体验的"重量感"）
-
-| 类型 | 行为 | 适合主题 | 心理效果 |
-|------|------|---------|---------|
-| **可逆** | 松手 calm 回落 | 呼吸/正念/专注 | "平静需要持续维护"——日常修行感 |
-| **不可逆** | calm 只升不降 | 剥落/释放/解构 | "一旦释放就回不去"——仪式感、解脱感 |
-
-情绪释放类（愤怒、悲伤）用**不可逆**更有力量；正念呼吸类用**可逆**更真实。黄金范例用的是可逆（长按攒、松手回落），对应"呼吸"主题。
-
----
-
-## 8. 避免的坑
-
-1. **不要让 calm 涨太快**。秒级达到终点会让用户觉得"这就完了？"——失去过程感。目标 15~40 秒走完全程。
-2. **不要在 intro 阶段就把声音开足**。压抑阶段的声音应该也是"压抑"的（刺耳/低沉），随 calm 渐变到治愈音色。否则一开始就治愈了，没有弧线。
-3. **complete 阶段要给"留白"**。不要一达到 100% 就弹窗或重置。让治愈的终态停留至少 5~10 秒，让用户体验"沉浸"本身。可以在 complete 后 15 秒才出现一个极淡的"重新开始"提示。
-4. **阶段切换不要太频繁**。`phase` 只在三段间切，不要切成 5、6 段。段越多文案越碎，越像闯关游戏而非冥想。
-
----
-
-## 速查：主题 → 状态机配置
-
-| 主题 | 交互模式 | 可逆? | fromCol→toCol | 全程时长 |
-|------|---------|-------|---------------|---------|
-| 呼吸光球 | 长按攒气 | 可逆 | 暗红→暖白蓝 | ~20s |
-| 化解愤怒 | 点击释放 | 不可逆 | 烈焰红→静水蓝 | ~25s (13击) |
-| 枯山水 | 拖拽梳理 | 可逆 | 灰土→金砂 | ~30s |
-| 专注共振 | 静止保持 | 可逆(易失) | 暗紫→金白 | 开放式 |
-| 剥落自卑 | 点击剥落 | 不可逆 | 灰壳→璀璨暖金 | ~30s |
-| 化雪归海 | 长按升温 | 不可逆 | 冰青→暖海蓝绿 | ~35s |
-
-记住：**先定交互模式和 fromCol/toCol，其他参数都是衍生的**。这一步定对，作品就成了一半。
-
----
-
-## 9. 交互模式 E：拖拽操控时间（Drag-to-Manipulate-Time）
-
-水平拖拽控制虚拟时间流速——左拖=倒拨，右拖=快进。适用于时钟、时间线、宇宙主题：
-
-```javascript
-let timeOffset = 0, lastDragX = 0, isDragging = false;
-
-window.addEventListener('mousedown', e => { isDragging = true; lastDragX = e.clientX; });
-window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    timeOffset += (e.clientX - lastDragX) * 15; // 1px=15s
-    lastDragX = e.clientX;
-});
-window.addEventListener('mouseup', () => { isDragging = false; });
-
-// 主循环：
-function updateTime(dt) {
-    timeOffset *= 0.94; // 释放后缓慢归零
-    return performance.now()/1000 + timeOffset;
-}
-```
-
-> ⚠️ 此模式不适合触屏——单指拖拽已被页面滚动占用。如需移动端支持，用双指或限制在卡片容器内。
-
----
-
-## 10. 交互模式 F：定时自动疗愈（Timed Auto-Healing）
-
-不用交互，靠时间自动推进。适用于叙事型/被动体验型 H5：
-
-```javascript
-// 10 秒后自动触发疗愈
-setTimeout(() => {
-    isHealing = true;
-    // ... 动画触发代码 ...
-}, 10000);
-
-// 使用 setInterval 控制焦虑元素生成速率（如每 120ms 弹出一个终端窗口）
-const spawnInterval = setInterval(spawnThought, 120);
-
-// 疗愈后清空
-function triggerHealing() {
-    clearInterval(spawnInterval);
-    // GSAP 炸碎所有焦虑元素
-    gsap.to(thoughts, {
-        opacity: 0, scale: 2.5, filter: "blur(15px)",
-        duration: 0.6, stagger: 0.005,
-        onComplete: () => { container.innerHTML = ''; }
-    });
-}
-```
-
-> 自动疗愈的核心技巧：**累积焦虑 → 临界点爆发 → 清空**。让"焦虑期"足够长（10s+）积累代入感，爆发要瞬间、干脆（0.6s）。
-
----
-
-## 11. 文案递进模式（Subtitle Progression）
-
-三阶段文案不仅切 phase，还可以用 `calm` 的连续值驱动中间态的淡入淡出：
-
-```javascript
-const COPY = [
-    { threshold: 0.0,  title: '这里很吵',     hint: '按住屏幕，让它安静下来' },
-    { threshold: 0.3,  title: '正在平复',     hint: '继续，感受它的节律' },
-    { threshold: 0.85, title: '安静了',       hint: '松手，它会记得这份平静' },
-];
-
-let activeIdx = 0;
-function updateSubtitle(calm) {
-    let targetIdx = 0;
-    for (let i = COPY.length-1; i >= 0; i--) {
-        if (calm >= COPY[i].threshold) { targetIdx = i; break; }
-    }
-    if (targetIdx !== activeIdx) {
-        // 淡出 → 换字 → 淡入
-        titleEl.style.opacity = 0;
-        setTimeout(() => {
-            titleEl.textContent = COPY[targetIdx].title;
-            hintEl.textContent  = COPY[targetIdx].hint;
-            titleEl.style.opacity = 1;
-        }, 800);
-        activeIdx = targetIdx;
-    }
-}
-```
-
-> `threshold` 数组定义每个文案的出现门槛。`calm` 从 0→1 的过程中，文案按门槛自动切换。
-
----
-
-## 速查新增
-
-| 主题 | 交互模式 | 特殊参数 |
-|------|---------|---------|
-| 时间粒子时钟 | E: 拖拽操控时间 | 1px=15s，释放衰减 0.94 |
-| 终端焦虑引擎 | F: 定时自动疗愈 | 10s 触发，120ms 弹窗，45 上限 |
-| **长按安抚（最推荐）** | **G: 长按=安抚，松手=衰减** | **soothe 涨速 0.4/s，跌速 0.6/s（松手比按住掉得快）** |
-
----
-
-## 14. 交互模式 G：长按安抚（最推荐用于疗愈类）
-
-这是经过验证的"仪式感"交互——**一个连贯动作，一个清晰含义**。
-
-```javascript
-let isPressing = false;
-let soothe = 0;
-
-function startInteract() {
-    isPressing = true;
-    document.body.classList.add('pressing');
-    createPulse(cx, cy); // 视觉反馈
-    AudioSys.playPulse(); // 音频反馈——每次按压都播放
-}
-function endInteract() {
-    isPressing = false;
-    document.body.classList.remove('pressing');
-}
-
-// 主循环：
-if (isPressing) {
-    soothe = min(1, soothe + dt * 0.4);  // 按住涨
-} else {
-    soothe = max(0, soothe - dt * 0.6);  // 松手掉更快——需要持续投入
-}
-```
-
-**光标随按压变形**（缩小=专注，放大=扩散）：
-```css
-#cur { width: 30px; height: 30px; transition: width 0.3s, height 0.3s; }
-body.pressing #cur { width: 15px; height: 15px; } /* 按住缩小——聚焦 */
-```
-
-**引导文字智能显隐**（只在需要时出现，不打扰）：
-```javascript
-const hintEl = document.getElementById('hint');
-// 第二幕开始 + 用户还没开始按压 → 显示引导
-if (act === 2 && !act3_trigger && !isPressing) {
-    hintEl.classList.add('show');
-} else {
-    hintEl.classList.remove('show');
-}
-```
-
-> 引导文字样式：`animation: breatheHint 3s infinite alternate`（呼吸式淡入淡出），`font-weight: 200; letter-spacing: 4px;`，放在底部 8vh。不喧宾夺主。
-
----
-
-## 15. 高潮触发条件设计（反模式对照）
-
-**❌ 错误：自动触发**
-```javascript
-// 等 soothe 自然衰减到阈值就触发——用户没有参与感
-if (soothe < 0.03 && !climax) { climax = true; }
-```
-
-**✅ 正确：挣来的高潮**
-```javascript
-// 四个条件同时满足：
-// 1. act3 已触发（用户已经开始安抚）
-// 2. 用户正在按压（主动在做）
-// 3. 时间超过阈值（不能秒达——过程感）
-// 4. 所有暗线被推回足够远（视觉上能看到结果）
-if (act3_trigger && isPressing && S_time > 15 && !climax) {
-    let allClear = true;
-    for (let d of darkLines) {
-        if (dist(cx, cy, d.x, d.y) < 300) allClear = false;
-    }
-    if (allClear) { climax = true; changeText("秩序回来了。是我让它回来的。"); }
-}
-```
-
-> **核心原则**：高潮触发条件里必须有一条是"用户的持续动作产生了可见的结果"。用户必须能**看见自己的动作改变了画面**，然后才能感觉到"我做到了"。
-
----
-
-## 12. 自动运镜入场（页面加载时必做）
+## 六、自动运镜入场（页面加载时必做）
 
 相机不能"就那么出现"。加载后执行入场动作，建立空间感和仪式感。
 
@@ -582,7 +324,131 @@ function entryOrbit(dt) {
 
 ---
 
-## 13. 文案节奏与视觉高潮同步
+## 七、4-7-8 呼吸引导（治愈达成后的"留白"仪式）
+
+archetype《释·茧》的做法：治愈达成（`calm>=1`）后**不结束**，而是进入一段持续的 4-7-8 呼吸引导——吸气 4 秒、屏息 7 秒、呼气 8 秒，共 19 秒一个周期。这是真实的临床放松法，让治愈不只是"到达"，而是"持续沉浸"。
+
+```javascript
+// 全局状态加一个 breathePhase 记录当前在哪个阶段
+const breatheHint = document.getElementById('breathe-hint');
+
+function computeBreathe(time) {
+    if (!State.healed) return 0;          // 未治愈不引导
+    const cycle = time % 19;              // 4 + 7 + 8 = 19s
+
+    if (cycle < 4) {
+        // 吸气 0→1
+        if (State.breathePhase !== 1) {
+            breatheHint.innerText = '吸气 ···';
+            State.breathePhase = 1;
+            Audio.strikeBowl(0.8);        // 开始吸气时轻敲颂钵
+        }
+        return cycle / 4;
+    } else if (cycle < 11) {
+        // 屏息 保持在 1
+        if (State.breathePhase !== 2) {
+            breatheHint.innerText = '屏息 ···';
+            State.breathePhase = 2;
+        }
+        return 1.0;
+    } else {
+        // 呼气 1→0
+        if (State.breathePhase !== 3) {
+            breatheHint.innerText = '呼气 ···';
+            State.breathePhase = 3;
+            Audio.strikeBowl(0.4);        // 呼气时再轻敲一次，释放压力
+        }
+        return 1.0 - (cycle - 11) / 8;
+    }
+}
+```
+
+`breathe` 这个 0~1 的值用途极广（这是视听联觉的高阶用法）：
+1. 传给 shader 的 `uBreathe` uniform → 粒子大小随呼吸起伏（吸气变大、呼气变小）
+2. 传给 `Audio.update(calm, breathe)` → 海浪噪音的音量和滤波器跟随呼吸开合（吸气=浪起、呼气=浪落）
+3. 驱动呼吸文字的 `transform: scale()` + `opacity` → 文字本身随吸气微微变大变亮，视觉引导更强
+
+```javascript
+// 呼吸文字跟随呼吸（在主循环里，State.showBreathUI 在治愈后 3 秒才置 true，留个停顿）
+if (State.showBreathUI) {
+    const s = 1.0 + breathe * 0.15;
+    breatheHint.style.transform = `scale(${s})`;
+    breatheHint.style.opacity = 0.3 + breathe * 0.7;
+}
+```
+
+> **颂钵敲击时机**：不是匀速敲，而是卡在呼吸的"转换点"——吸气开始时强敲(0.8)、呼气开始时弱敲(0.4)。这让声音成为呼吸的"节拍器"，比任何视觉提示都有效。
+
+## 八、进阶：可逆 vs 不可逆（决定体验的"重量感"）
+
+| 类型 | 行为 | 适合主题 | 心理效果 |
+|------|------|---------|---------|
+| **可逆** | 松手 calm 回落 | 呼吸/正念/专注 | "平静需要持续维护"——日常修行感 |
+| **不可逆** | calm 只升不降 | 剥落/释放/解构 | "一旦释放就回不去"——仪式感、解脱感 |
+
+情绪释放类（愤怒、悲伤）用**不可逆**更有力量；正念呼吸类用**可逆**更真实。黄金范例用的是可逆（长按攒、松手回落），对应"呼吸"主题。
+
+---
+
+## 九、避免的坑
+
+1. **不要让 calm 涨太快**。秒级达到终点会让用户觉得"这就完了？"——失去过程感。目标 15~40 秒走完全程。
+2. **不要在 intro 阶段就把声音开足**。压抑阶段的声音应该也是"压抑"的（刺耳/低沉），随 calm 渐变到治愈音色。否则一开始就治愈了，没有弧线。
+3. **complete 阶段要给"留白"**。不要一达到 100% 就弹窗或重置。让治愈的终态停留至少 5~10 秒，让用户体验"沉浸"本身。可以在 complete 后 15 秒才出现一个极淡的"重新开始"提示。
+4. **阶段切换不要太频繁**。`phase` 只在三段间切，不要切成 5、6 段。段越多文案越碎，越像闯关游戏而非冥想。
+
+---
+
+## 速查：主题 → 状态机配置
+
+| 主题 | 交互模式 | 可逆? | fromCol→toCol | 全程时长 |
+|------|---------|-------|---------------|---------|
+| 呼吸光球 | 长按攒气 | 可逆 | 暗红→暖白蓝 | ~20s |
+| 化解愤怒 | 点击释放 | 不可逆 | 烈焰红→静水蓝 | ~25s (13击) |
+| 枯山水 | 拖拽梳理 | 可逆 | 灰土→金砂 | ~30s |
+| 专注共振 | 静止保持 | 可逆(易失) | 暗紫→金白 | 开放式 |
+| 剥落自卑 | 点击剥落 | 不可逆 | 灰壳→璀璨暖金 | ~30s |
+| 化雪归海 | 长按升温 | 不可逆 | 冰青→暖海蓝绿 | ~35s |
+
+记住：**先定交互模式和 fromCol/toCol，其他参数都是衍生的**。这一步定对，作品就成了一半。
+
+---
+
+## 十、文案递进模式（Subtitle Progression）
+
+三阶段文案不仅切 phase，还可以用 `calm` 的连续值驱动中间态的淡入淡出：
+
+```javascript
+const COPY = [
+    { threshold: 0.0,  title: '这里很吵',     hint: '按住屏幕，让它安静下来' },
+    { threshold: 0.3,  title: '正在平复',     hint: '继续，感受它的节律' },
+    { threshold: 0.85, title: '安静了',       hint: '松手，它会记得这份平静' },
+];
+
+let activeIdx = 0;
+function updateSubtitle(calm) {
+    let targetIdx = 0;
+    for (let i = COPY.length-1; i >= 0; i--) {
+        if (calm >= COPY[i].threshold) { targetIdx = i; break; }
+    }
+    if (targetIdx !== activeIdx) {
+        // 淡出 → 换字 → 淡入
+        titleEl.style.opacity = 0;
+        setTimeout(() => {
+            titleEl.textContent = COPY[targetIdx].title;
+            hintEl.textContent  = COPY[targetIdx].hint;
+            titleEl.style.opacity = 1;
+        }, 800);
+        activeIdx = targetIdx;
+    }
+}
+```
+
+> `threshold` 数组定义每个文案的出现门槛。`calm` 从 0→1 的过程中，文案按门槛自动切换。
+
+---
+
+## 十一、文案节奏与视觉高潮同步
 
 ### 三段式文案结构
 
@@ -615,4 +481,145 @@ function triggerClimax() {
 - **看见，不说教**："这里很吵" > "你需要安静下来"
 - **陪伴，不解救**："我看到了" > "你应该这样做"
 - **见证，不总结**：终态文字只是安静地陈述一个事实，不给人生建议
-| 深蓝呼吸 | 按压攒气 + 文案递进 | 3 阶段文案 + `calm` 阈值切换 |
+
+---
+
+## 十二、交互模式 E：拖拽操控时间（Drag-to-Manipulate-Time）
+
+水平拖拽控制虚拟时间流速——左拖=倒拨，右拖=快进。适用于时钟、时间线、宇宙主题：
+
+```javascript
+let timeOffset = 0, lastDragX = 0, isDragging = false;
+
+window.addEventListener('mousedown', e => { isDragging = true; lastDragX = e.clientX; });
+window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    timeOffset += (e.clientX - lastDragX) * 15; // 1px=15s
+    lastDragX = e.clientX;
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+// 主循环：
+function updateTime(dt) {
+    timeOffset *= 0.94; // 释放后缓慢归零
+    return performance.now()/1000 + timeOffset;
+}
+```
+
+> ⚠️ 此模式不适合触屏——单指拖拽已被页面滚动占用。如需移动端支持，用双指或限制在卡片容器内。
+
+---
+
+## 十三、交互模式 F：定时自动疗愈（Timed Auto-Healing）
+
+不用交互，靠时间自动推进。适用于叙事型/被动体验型 H5：
+
+```javascript
+// 10 秒后自动触发疗愈
+setTimeout(() => {
+    isHealing = true;
+    // ... 动画触发代码 ...
+}, 10000);
+
+// 使用 setInterval 控制焦虑元素生成速率（如每 120ms 弹出一个终端窗口）
+const spawnInterval = setInterval(spawnThought, 120);
+
+// 疗愈后清空
+function triggerHealing() {
+    clearInterval(spawnInterval);
+    // GSAP 炸碎所有焦虑元素
+    gsap.to(thoughts, {
+        opacity: 0, scale: 2.5, filter: "blur(15px)",
+        duration: 0.6, stagger: 0.005,
+        onComplete: () => { container.innerHTML = ''; }
+    });
+}
+```
+
+> 自动疗愈的核心技巧：**累积焦虑 → 临界点爆发 → 清空**。让"焦虑期"足够长（10s+）积累代入感，爆发要瞬间、干脆（0.6s）。
+
+---
+
+## 速查新增
+
+| 主题 | 交互模式 | 特殊参数 |
+|------|---------|---------|
+| 时间粒子时钟 | E: 拖拽操控时间 | 1px=15s，释放衰减 0.94 |
+| 终端焦虑引擎 | F: 定时自动疗愈 | 10s 触发，120ms 弹窗，45 上限 |
+| **长按安抚（最推荐）** | **G: 长按=安抚，松手=衰减** | **soothe 涨速 0.4/s，跌速 0.6/s（松手比按住掉得快）** |
+
+---
+
+## 十四、交互模式 G：长按安抚（最推荐用于疗愈类）
+
+这是经过验证的"仪式感"交互——**一个连贯动作，一个清晰含义**。
+
+```javascript
+let isPressing = false;
+let soothe = 0;
+
+function startInteract() {
+    isPressing = true;
+    document.body.classList.add('pressing');
+    createPulse(cx, cy); // 视觉反馈
+    AudioSys.playPulse(); // 音频反馈——每次按压都播放
+}
+function endInteract() {
+    isPressing = false;
+    document.body.classList.remove('pressing');
+}
+
+// 主循环：
+if (isPressing) {
+    soothe = min(1, soothe + dt * 0.4);  // 按住涨
+} else {
+    soothe = max(0, soothe - dt * 0.6);  // 松手掉更快——需要持续投入
+}
+```
+
+**光标随按压变形**（缩小=专注，放大=扩散）：
+```css
+#cur { width: 30px; height: 30px; transition: width 0.3s, height 0.3s; }
+body.pressing #cur { width: 15px; height: 15px; } /* 按住缩小——聚焦 */
+```
+
+**引导文字智能显隐**（只在需要时出现，不打扰）：
+```javascript
+const hintEl = document.getElementById('hint');
+// 第二幕开始 + 用户还没开始按压 → 显示引导
+if (act === 2 && !act3_trigger && !isPressing) {
+    hintEl.classList.add('show');
+} else {
+    hintEl.classList.remove('show');
+}
+```
+
+> 引导文字样式：`animation: breatheHint 3s infinite alternate`（呼吸式淡入淡出），`font-weight: 200; letter-spacing: 4px;`，放在底部 8vh。不喧宾夺主。
+
+---
+
+## 十五、高潮触发条件设计（反模式对照）
+
+**❌ 错误：自动触发**
+```javascript
+// 等 soothe 自然衰减到阈值就触发——用户没有参与感
+if (soothe < 0.03 && !climax) { climax = true; }
+```
+
+**✅ 正确：挣来的高潮**
+```javascript
+// 四个条件同时满足：
+// 1. act3 已触发（用户已经开始安抚）
+// 2. 用户正在按压（主动在做）
+// 3. 时间超过阈值（不能秒达——过程感）
+// 4. 所有暗线被推回足够远（视觉上能看到结果）
+if (act3_trigger && isPressing && S_time > 15 && !climax) {
+    let allClear = true;
+    for (let d of darkLines) {
+        if (dist(cx, cy, d.x, d.y) < 300) allClear = false;
+    }
+    if (allClear) { climax = true; changeText("秩序回来了。是我让它回来的。"); }
+}
+```
+
+> **核心原则**：高潮触发条件里必须有一条是"用户的持续动作产生了可见的结果"。用户必须能**看见自己的动作改变了画面**，然后才能感觉到"我做到了"。

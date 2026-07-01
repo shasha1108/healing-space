@@ -2,7 +2,7 @@
 
 > 设计哲学源自 Three.js Awesome Graphics 的 deterministic reproducibility 原则（同一 seed = 同一输出 = 回归对比）。适配到 healing-space：**不是让用户探索不同种子（那是 pixel-bloom 的 seeded-exploration），而是让开发者在迭代修改参数时，能对比"改之前"和"改之后"。**
 >
-> **加载时机**：STEP 4 生成代码时必读——在写第一行初始化代码之前确定种子策略。
+> **加载时机**：STEP 3.2 后、首次代码初始化前（首次调用 Math.random() 之前）——与 SKILL.md 路由表对齐。
 >
 > **触发条件**：所有含 `Math.random()` 初始化（粒子位置/颜色/噪声偏移）的场景。
 

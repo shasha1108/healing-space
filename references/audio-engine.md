@@ -319,7 +319,7 @@ function createBinauralBeat(baseFreq = 200, beatFreq = 8) {
 
 ## 七、完整的治愈系音频引擎封装（验证版，直接用）
 
-下面这个引擎是 `assets/golden-example.html` 实际使用的版本，融合了 archetype《释·茧》验证过的所有配方：焦虑心跳 drone + 双八度颂钵 + 棕噪海浪 + 4-7-8 呼吸联动。对外暴露 `update(calm, breathe)` 供主循环每帧调用，`strikeBowl(intensity)` 供状态机在叙事节点调用：
+下面这个引擎融合了 archetype《释·茧》验证过的所有配方：焦虑心跳 drone + 双八度颂钵 + 棕噪海浪 + 4-7-8 呼吸联动。对外暴露 `update(calm, breathe)` 供主循环每帧调用，`strikeBowl(intensity)` 供状态机在叙事节点调用：
 
 ```javascript
 const Audio = {
@@ -418,7 +418,7 @@ window.addEventListener('mousedown', () => { Audio.resume(); });
 window.addEventListener('touchstart', () => { Audio.resume(); }, { passive: true });
 ```
 
-> 接到状态机后，主循环只需两句：`Audio.update(State.calm, breathe)` 每帧；`Audio.strikeBowl(1.2)` 在治愈达成/呼吸转换点。这就是 golden-example 实际跑的代码。
+> 接到状态机后，主循环只需两句：`Audio.update(State.calm, breathe)` 每帧；`Audio.strikeBowl(1.2)` 在治愈达成/呼吸转换点。
 
 ---
 
@@ -605,120 +605,30 @@ function updateDynamic(isInvading, sootheForce) {
 
 ---
 
-## 十二、AudioWorklet 颂钵处理器（高质量泛音版）
+## 十二、AudioWorklet 颂钵处理器 → audio-worklet.md
 
 AudioWorklet 在独立线程运行 DSP，帧级精度（21μs @48kHz）——适合需要真实金属泛音列和精密余音控制的场景。
 
-> **快速决策**：§三 配方 A（432+216Hz 双正弦）已覆盖 80% 场景，简单且经 archetype 验证。AudioWorklet 的核心优势是**非整数泛音列**（更像真实颂钵）和 **calm 值驱动余音长度**（calm 越高余音越悠长）。
-
-```javascript
-// Blob URL 注入处理器代码（无需单独 .js 文件）
-async function createBellWorklet(audioCtx, masterGain) {
-    const CODE = `
-class HealingBellProcessor extends AudioWorkletProcessor {
-    constructor() {
-        super();
-        this.partials = [];
-        this.port.onmessage = (e) => {
-            if (e.data.type === 'strike') this._strike(e.data.intensity, e.data.calm);
-        };
-    }
-    _strike(intensity = 1.0, calm = 0.5) {
-        const freqMults = [1.0, 2.756, 5.404, 8.933, 13.341];
-        const ampMults  = [1.0, 0.45,  0.25,  0.12,  0.06];
-        this.partials = freqMults.map((m, i) => ({
-            freq:      432 * m,
-            amp:       0,
-            targetAmp: intensity * ampMults[i] * 0.4,
-            phase:     0,
-            decayRate: 1 / ((6 + calm * 8) * (1 + i * 0.5) * 48000),
-            detune:    (Math.random() - 0.5) * 4,
-        }));
-    }
-    process(_, outputs) {
-        const out = outputs[0], len = out[0].length;
-        for (let i = 0; i < len; i++) {
-            let s = 0;
-            for (const p of this.partials) {
-                if (p.amp < p.targetAmp) p.amp = Math.min(p.amp + p.targetAmp/240, p.targetAmp);
-                p.amp  *= (1 - p.decayRate);
-                p.phase += ((p.freq + p.detune) / 48000) * Math.PI * 2;
-                s += Math.sin(p.phase) * p.amp;
-            }
-            out[0][i] = s;
-            if (out[1]) out[1][i] = s * 0.97;
-        }
-        return true;
-    }
-}
-registerProcessor('healing-bell', HealingBellProcessor);`;
-
-    const url = URL.createObjectURL(new Blob([CODE], {type:'application/javascript'}));
-    await audioCtx.audioWorklet.addModule(url);
-    URL.revokeObjectURL(url);
-
-    const node = new AudioWorkletNode(audioCtx, 'healing-bell', {
-        numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2]
-    });
-    node.connect(masterGain);
-    return node;
-}
-
-// 在状态机叙事节点触发：strikeWorkletBell(node, 1.2, State.calm)
-function strikeWorkletBell(node, intensity = 1.0, calm = 0.5) {
-    node.port.postMessage({ type: 'strike', intensity, calm });
-}
-```
-
-> 完整实现（含 calm 驱动自发轻敲、与 ConvolverNode 混响集成）见 **audio-worklet.md**。
+> **快速决策**：§三 配方 A（432+216Hz 双正弦）已覆盖 80% 场景，简单且经 archetype 验证。需要非整数泛音列 + calm 驱动余音长度 + 自发轻敲时，使用完整版：
+> → **audio-worklet.md §一~§三**（基础架构 + HealingBellProcessor + calm 联动）
 
 ---
 
-## 十三、ConvolverNode 空间混响（程序化，零音频文件）
+## 十三、ConvolverNode 空间混响 → audio-worklet.md
 
-用代码生成脉冲响应（IR），为任何声源添加寺庙/山洞/深海的空间包裹感：
+程序化生成脉冲响应（IR），零音频文件。为颂钵等声源添加寺庙/山洞/深海的空间包裹感。
 
-```javascript
-function createReverb(audioCtx, { duration=3.0, decay=2.0, roomType='temple' } = {}) {
-    const sr  = audioCtx.sampleRate;
-    const buf = audioCtx.createBuffer(2, sr * duration, sr);
-    const pre = Math.floor(0.02 * sr);  // 20ms 前延迟
-
-    for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch);
-        for (let i = 0; i < d.length; i++) {
-            if (i < pre) { d[i] = 0; continue; }
-            const t = (i - pre) / sr;
-            d[i] = (Math.random() * 2 - 1) * Math.exp(-t * decay);
-            if (roomType === 'cave'   && i < pre + 1200) d[i] *= 2.2;  // 早期强反射
-            if (roomType === 'temple' && t < 0.3) d[i] *= t / 0.3;     // 渐进涌现
-        }
-    }
-    const conv = audioCtx.createConvolver();
-    conv.buffer = buf;
-    return conv;
-}
-
-// 接入颂钵（干声 + 湿声并联）
-function addReverbToBowl(audioCtx, bowlGain, masterGain, roomType = 'temple') {
-    const conv    = createReverb(audioCtx, { duration: 4.0, decay: 1.5, roomType });
-    const wetGain = audioCtx.createGain();
-    wetGain.gain.value = 0.35;  // 混响量：0=全干，1=全湿
-
-    bowlGain.connect(masterGain);                              // 干声
-    bowlGain.connect(conv).connect(wetGain).connect(masterGain); // 湿声经混响
-    return { conv, wetGain };
-}
-```
-
-**三种房间预设**：寺庙 `{ duration:4.0, decay:1.5, roomType:'temple' }`（推荐）/ 山洞 `{ duration:5.0, decay:1.2, roomType:'cave' }`（压抑初始态）/ 深海 `{ duration:8.0, decay:0.8 }`（极致包裹感）。
+> → **audio-worklet.md §四~§五**（完整 IR 生成 + 4 种房间预设 + `transitionReverb` calm 过渡）
 
 ---
 
 ## 速查新增：AudioWorklet + 空间混响
 
-| 技法 | 适用场景 | 关键参数 |
-|------|---------|---------|
-| AudioWorklet 颂钵 | 高质量余音 + 真实金属泛音感 | 泛音比 `[1, 2.756, 5.404, 8.933]`，余音 6~22s |
-| ConvolverNode 寺庙 | 颂钵 / 治愈主题混响 | `duration:4.0, decay:1.5, roomType:'temple'` |
-| ConvolverNode 山洞 | 压抑初始态增加压迫感 | `duration:5.0, decay:1.2, roomType:'cave'` |
+> 代码骨架已迁至 **audio-worklet.md**。以下为技法速查，完整实现见对应章节。
+
+| 技法 | 适用场景 | 关键参数 | 见 |
+|------|---------|---------|-----|
+| AudioWorklet 颂钵 | 高质量余音 + 真实金属泛音感 | 泛音比 `[1, 2.756, 5.404, 8.933]`，余音 6~22s | audio-worklet.md §二 |
+| ConvolverNode 寺庙 | 颂钵 / 治愈主题混响 | `duration:4.0, decay:1.5, roomType:'temple'` | audio-worklet.md §四~§五 |
+| ConvolverNode 山洞 | 压抑初始态增加压迫感 | `duration:5.0, decay:1.2, roomType:'cave'` | audio-worklet.md §五 |
+| calm 过渡混响 | 压抑→治愈 空间感渐变 | `transitionReverb()` | audio-worklet.md §四 |

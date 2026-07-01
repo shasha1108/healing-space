@@ -1,5 +1,7 @@
 # AudioWorklet + ConvolverNode — 精密音色与空间混响
 
+> **前置依赖**：`state-machine.md`（需访问 `State.calm` 对象驱动余音长度和自发轻敲节奏）。
+
 AudioWorklet 让声音 DSP 在独立线程运行，帧级精度（21μs @48kHz）。
 ConvolverNode 用程序化生成的脉冲响应添加空间感——寺庙/山洞/深海，**零音频文件**。
 
