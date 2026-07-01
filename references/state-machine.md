@@ -33,7 +33,7 @@ const State = {
 
 // 每帧把 calm 平滑追上 calmTarget（缓动，避免突变）
 function updateState(dt) {
-    State.calm += (State.calmTarget - State.calm) * Math.min(1, dt * 0.8);
+    State.calm += (State.calmTarget - State.calm) * Math.min(1, dt * 1.5);  // 全局常量 CALM_LERP_SPEED（见 causal-field.md §三 规则 3）
     State.time += dt;
 
     // 阶段切换
@@ -137,64 +137,22 @@ function updateState(dt) {
 
 ---
 
-## 三、calm 如何驱动一切（视听联觉的总线）
+## 三、calm 如何驱动一切（总线）
 
 `calm` 是**唯一的状态源**。所有视觉、物理、音频参数都从它派生。
 
-**第一个关键技法：smoothstep 缓动。** 不要直接用 `calm` 驱动一切。先过一道 smoothstep，让转化"有机"而非机械。这是 archetype《释·茧》验证有效的做法：
+**smoothstep 根基**（所有过渡类参数的起点）：
 
 ```javascript
 const c  = State.calm;
-const ts = c * c * (3 - 2 * c);   // smoothstep，0→1 的 S 形过渡
-// 之后所有"过渡类"参数都用 ts 而非 c
+const ts = c * c * (3 - 2 * c);   // smoothstep，S 形过渡——"起势慢→中段快→收尾慢"
 ```
 
-> 为什么：线性过渡在中间段太平、两端太突兀；smoothstep 自带"起势慢→中段快→收尾慢"的呼吸感，和情绪转化的真实节律吻合。
+**颜色过渡（GPU 端）** → `shader-patterns.md §六` — 主循环只需一行 `material.uniforms.uTransition.value = ts`。
 
-**颜色过渡与分层上色 → 见 `references/shader-patterns.md` §六（GPU 端 `mix(aColorFrom, aColorTo, uTransition)` + 按概率分配 2~3 种色调）。主循环只需一行 `material.uniforms.uTransition.value = ts`。**
+**完整参数映射表 + applyCalmState 骨架 + 过渡一致性规则** → `causal-field.md §二~§四`（权威定义）。
 
-完整总线（主循环里）：
-
-```javascript
-function loop() {
-    // ... dt 计算 ...
-    updateState(dt);
-    updatePhysics(dt, State.time, mouse);
-
-    // === 总线：从 calm 派生所有参数 ===
-    const c  = State.calm;
-    const ts = c * c * (3 - 2 * c);   // smoothstep 缓动
-
-    // 1. 颜色：GPU 端混合（一行 uniform，不要 CPU 循环）
-    material.uniforms.uTransition.value = ts;
-
-    // 2. 物理强度：压抑时 curl 大、阻尼小（躁动）；治愈时归位强（安定）
-    PHYS.CURL_STRENGTH = 20 * (1 - c) + 2;
-    PHYS.STIFFNESS     = 0.5 + 2.0 * c;
-    PHYS.DAMPING       = 0.92 + 0.06 * c;
-
-    // 3. 粒子大小：治愈时光球膨胀
-    material.uniforms.uGlobalSize.value = 0.6 + 1.4 * c;
-
-    // 4. 呼吸（治愈后才 >0，见下方"4-7-8 呼吸引导"）
-    const breathe = computeBreathe(State.time);
-    material.uniforms.uBreathe.value = breathe;
-
-    // 5. 相机动力学（焦虑抖动 / 治愈拉远，见下方专节）
-    updateCamera(State.time);
-
-    // 6. 音频
-    Audio.update(c, breathe);
-
-    // 7. UI 文案随阶段切换
-    updateUI(State.phase);
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(loop);
-}
-```
-
-> **这个总线结构是整个 skill 的灵魂**。一旦理解"所有参数都从 calm 派生 + 颜色走 GPU"，写任何主题都只是改 `colFrom/colTo` 的分层配方、改物理映射、改文案。
+> 本节的快速上手示例已被 causal-field.md 替代——后续更新只在该文件进行，避免两处值漂移。
 
 ---
 
@@ -619,6 +577,8 @@ function entryOrbit(dt) {
 ```
 
 > 入场期间暂停用户交互。入场完成后恢复正常。
+> 
+> **入场→破坏过渡时序**：入场完成后**立即**触发 Act 2 破坏（0ms 延迟）。破坏动画本身有 1-2 秒渐变（墨迹从边缘渗入、外壳从顶部开始剥落），渐变期就是自然的视觉缓冲——不需要额外停顿。停顿 = 用户以为页面卡住了。
 
 ---
 

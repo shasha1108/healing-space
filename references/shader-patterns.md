@@ -439,7 +439,7 @@ scene.fog = new THREE.FogExp2(0x000508, 0.002);
 scene.fog = new THREE.FogExp2(0xF2F1E6, 0.0015);
 ```
 
-> `FogExp2` 比 `Fog` 更自然——远处物体以指数速率隐入雾中，符合真实大气衰减。`density` 0.001~0.003 是治愈系作品的舒适区间。
+> `FogExp2` 比 `Fog` 更自然——远处物体以指数速率隐入雾中，符合真实大气衰减。`density` 0.001~0.003 是治愈系作品的舒适区间。**深色场景用 0.0008~0.002，浅色场景用 0.001~0.003。**
 
 ### 丁达尔光路（Tyndall Rays）——Fragment Shader 端
 

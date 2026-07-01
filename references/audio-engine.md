@@ -586,6 +586,7 @@ function playPulse() {
 });
 
 // 紧张压迫：55Hz + 58Hz 三角波 → 3Hz 差频 = 微弱的"不安跳动"，代表边界被侵入
+// ⚠️ 此处用双频差拍（非单频 drone）——SKILL.md 禁的是 55Hz 单频持续正弦波，双频差拍不产生稳态闷响
 [55, 58].forEach(f => {
     const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = f;
     osc.connect(tensionFilter); osc.start();

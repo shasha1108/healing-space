@@ -163,11 +163,7 @@ float opS(float a, float b) { return max(a, -b); }  // A 减去 B
 `smin` 让两个形状有机融合而非生硬布尔并集。**液态水滴合并、气泡融合、有机组织**的核心函数：
 
 ```glsl
-// 多项式 smooth minimum，k 控制融合半径
-float smin(float a, float b, float k) {
-    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-    return mix(b, a, h) - k * h * (1.0 - h);
-}
+// smin() 定义见 shader-patterns.md §十三（避免重复定义导致 GLSL redefinition 错误）
 ```
 
 使用示例：
@@ -219,33 +215,13 @@ vec3 shade(vec3 p, vec3 rd) {
 用噪声扭曲坐标系，产生有机的云雾/岩浆/极光质感：
 
 ```glsl
-// fBM（需要 snoise，见 shader-patterns.md §八）
-float fbm(vec3 p) {
-    float v = 0.0, amp = 0.5;
-    for (int i = 0; i < 5; i++) {
-        v += amp * snoise(p);
-        p = p * 2.0 + vec3(1.7, 9.2, 5.3);
-        amp *= 0.5;
-    }
-    return v;
-}
+// fbm + domainWarp 定义见 shader-patterns.md §十三（避免重复定义导致 GLSL redefinition 错误）
+// snoise 见 shader-patterns.md §八
+```
 
-// 双层域扭曲（关键：两次 fBM 叠加产生极光/岩浆层次感）
-float domainWarp(vec3 p, float t) {
-    vec3 q = vec3(
-        fbm(p + t * 0.2),
-        fbm(p + vec3(5.2, 1.3, 0.0) + t * 0.15),
-        fbm(p + vec3(1.3, 8.7, 0.0) + t * 0.18)
-    );
-    vec3 r = vec3(
-        fbm(p + 4.0*q + vec3(1.7, 9.2, 3.3)),
-        fbm(p + 4.0*q + vec3(8.3, 2.8, 5.1)),
-        fbm(p + 4.0*q + vec3(5.4, 6.8, 1.2))
-    );
-    return fbm(p + 4.0 * r);
-}
+**在 SDF 中用域扭曲——raymarching 独有的 calm 映射：**
 
-// 在 SDF 中用域扭曲：压抑 → 有机流体
+```glsl
 float scene(vec3 p) {
     float warpStrength = mix(0.8, 0.15, uCalm);  // calm↑ → 扭曲↓（趋于平静）
     float warp = domainWarp(p * 0.4, uTime * 0.05) * warpStrength;
