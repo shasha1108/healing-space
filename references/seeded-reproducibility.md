@@ -219,7 +219,152 @@ function updateButterflyWing(dt) {
 
 ---
 
-## 七、自检清单
+## 七、确定性逐元素变化模式
+
+> 设计哲学源自 stylized-scene 的逐叶片 hash 变化：`hash(instanceIndex)` 为每个元素产生确定性但不同的值。这解决了一个核心矛盾——**seed 保证世界的可复现性，但同一 seed 内的所有元素需要看起来各不相同。**
+
+### 7.1 核心公式
+
+所有变化模式基于一个简单原则：**`hash(index)` 对每个 index 返回确定性的 `[0, 1)` 伪随机值，不同 index 产生不同值，同一 index 永远产生同一值。**
+
+```
+hash(n) → [0, 1)  确定性、均匀分布、GPU/CPU 均可实现
+```
+
+常用模式：
+
+```javascript
+// === 模式 1：振幅变化（每个元素响应强度不同） ===
+// 应用场景：粒子刚度、风弯曲幅度、弹簧系数
+// 范围：默认值的 65%-135%
+const ampVar = 0.65 + hash(idx + 7) * 0.7;
+
+// 用法：
+const particleStiffness = BASE_STIFFNESS * ampVar;
+// 粒子 0 刚度 = BASE * 0.72，粒子 1 刚度 = BASE * 1.18 ...
+// → 有些粒子"硬"、有些"软"→ 群体运动不单调
+
+// === 模式 2：亮度/颜色变化（每个元素亮度微调） ===
+// 应用场景：粒子亮度、草叶亮度、花瓣颜色深度
+// 范围：默认值的 85%-115%（±15%，微妙但关键）
+const brightnessVar = 0.85 + hash(idx + 13.37) * 0.3;
+
+// 用法：
+const finalBrightness = baseBrightness * brightnessVar;
+// → 相邻粒子亮度微差——不是"有的太亮有的太暗"，是"自然偏差"
+
+// === 模式 3：位置/边缘抖动（确定性随机偏移） ===
+// 应用场景：草地边缘的路径遮罩、粒子初始位置微调、噪声偏移量
+// 范围：±JITTER_AMOUNT
+function deterministicJitter(idx, jitterAmount) {
+  return (hash(idx * 12.9898) - 0.5) * 2 * jitterAmount;
+}
+
+// 用法：在路径边缘，不是简单 cull（遮罩>0.5 的叶片消失），
+// 而是用抖动产生不规则边缘
+const onPath = maskValue + deterministicJitter(i, 0.15) > 0.5;
+// → 路径边缘不是直线切割——是不规则的、自然的过渡
+
+// === 模式 4：多值解耦（同一个元素需要多个独立随机值） ===
+// 用不同的 HASH_OFFSET 确保值之间不相关
+const HASH_PHASE    = 0;     // hash(idx + 0) → 相位
+const HASH_AMP      = 7;     // hash(idx + 7) → 振幅
+const HASH_COLOR    = 13;    // hash(idx + 13) → 颜色偏移
+const HASH_BRIGHT   = 13.37; // hash(idx + 13.37) → 亮度
+const HASH_NOISE    = 73;    // hash(idx + 73) → 噪声偏移
+
+// 为什么是这些数字？→ 任意质数或无理小数，确保 hash 值之间的相关性可忽略
+// 不用 1, 2, 3, 4——相邻偏移可能产生相关的 hash 值
+```
+
+### 7.2 hash 函数的两种实现
+
+**CPU 端（JavaScript / p5.js）**—— 使用 mulberry32：
+
+```javascript
+// mulberry32 对每个 seed 产生独立序列
+// 用法：为每个元素创建独立的 rng 实例
+function hashElement(idx) {
+  // 将 idx 作为 mulberry32 的种子，取第一个值
+  const rng = mulberry32(idx);
+  return rng();  // 此 idx 的确定性随机值
+}
+
+// 或使用更轻量的 hash（不创建 rng 实例）：
+function hashFloat(n) {
+  const x = Math.sin(n * 12.9898 + 7.373) * 43758.5453123;
+  return x - Math.floor(x);
+}
+// ⚠️ sin-hash 在大量调用时性能优于 mulberry32，但分布质量略低。
+// 对于视觉变化（非加密/非游戏逻辑），sin-hash 完全足够。
+```
+
+**GPU 端（GLSL / TSL）**—— 使用 `fract(sin(n) * largeConst)`：
+
+```glsl
+// GLSL
+float hash(float n) {
+  return fract(sin(n) * 43758.5453123);
+}
+
+// 需要第二个独立值时，改变种子：
+float hash2(float n) {
+  return fract(sin(n + 7.0) * 43758.5453123);
+}
+```
+
+```javascript
+// TSL (Three.js Shading Language)
+import { hash, float } from 'three/tsl';
+
+const phaseVal = hash(instanceIndex);
+const ampVal = hash(instanceIndex.add(7.0));
+```
+
+### 7.3 何时用 hash、何时用 rng()
+
+| 场景 | 用 hash(index) | 用 rng() |
+|------|---------------|---------|
+| 粒子初始刚度/阻尼/颜色 | ✅ — 确定性、逐粒子独立 | ❌ |
+| 粒子 Perlin 噪声相位偏移 | ✅ — 不同偏移 = 不同流动路径 | ❌ |
+| 大量元素的连续序列值（如 30K 草叶的 ampVar） | ✅ — O(1) 不需要存储 | ❌ — 需要 30K 个 rng 实例不现实 |
+| 场景结构决策（风车位置、房子位置、路径走向） | ❌ — 这些需要多个值的序列 | ✅ — rng() 序列更自然 |
+| 物种参数选择（树高 min/max 区间内取值） | ❌ — 需要 [min, max] 区间 | ✅ — rng() * (max-min) + min |
+
+**判断原则**：如果只需要**每个元素的 1-3 个独立值** → hash(index + offset)。如果需要**一个元素的多个连续随机决策**（如生长模拟的每一步） → rng()。
+
+### 7.4 通用工具函数（注入到代码模板）
+
+```javascript
+// === 确定性逐元素变化 —— 注入到生成代码顶部 ===
+
+// 轻量 hash（用于逐元素变化）
+function hf(n) {
+  const x = Math.sin(n * 12.9898 + 7.373) * 43758.5453123;
+  return x - Math.floor(x);
+}
+
+// 振幅变化: 0.65-1.35
+function ampVar(idx) { return 0.65 + hf(idx + 7) * 0.7; }
+
+// 亮度变化: ±15%
+function brightVar(idx) { return 0.85 + hf(idx + 13.37) * 0.3; }
+
+// 确定性抖动: ±amount
+function jitter(idx, amount) { return (hf(idx * 12.9898) - 0.5) * 2 * amount; }
+
+// 颜色微变：在三通道上各 ±range
+function colorShift(baseRGB, idx, range) {
+  const r = baseRGB.r + jitter(idx, range);
+  const g = baseRGB.g + jitter(idx + 100, range);
+  const b = baseRGB.b + jitter(idx + 200, range);
+  return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+}
+```
+
+---
+
+## 八、自检清单
 
 - [ ] 所有初始化阶段的 `Math.random()` 已替换为 `rng()`？
 - [ ] 运行时阶段（帧循环内）的 `Math.random()` 保留了？
@@ -227,3 +372,5 @@ function updateButterflyWing(dt) {
 - [ ] 同 seed 刷新 3 次，粒子位置/颜色/噪声偏移完全一致？
 - [ ] 改 seed 不改参数 → 生成不同的世界？（验证种子实际生效）
 - [ ] 改参数不改 seed → 只有目标参数变化，其他不变？（验证迭代可对比性）
+- [ ] 需要逐元素变化的场景（粒子刚度/颜色偏移/噪声相位）→ 使用了 `hash(idx + OFFSET)` 而非 `rng()`？
+- [ ] 不同用途的 hash 使用了不同的偏移值（7/13/13.37/73），确保值之间解耦？

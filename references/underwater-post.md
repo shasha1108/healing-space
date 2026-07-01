@@ -303,6 +303,7 @@ if (!canReadDepth) {
 | 3 | waterClarity 过低(< 15) | 警告 | 水下能见度 < 3 米——什么都看不见 | clarity 不低于 30。情绪最压抑时用 30（模糊但至少可见），治愈时用 100+ |
 | 4 | 移动端硬跑 depth read | 警告 | 低端 Android 帧率掉到 < 20 | 移动端检测 → 降级到全屏统一 fog |
 | 5 | waterLevel 和 ocean mesh Y 不一致 | 警告 | 水面视觉高度 ≠ 水下判断高度 → 下潜时 fog 在错误高度激活 | 用一个常量 `WATER_LEVEL`，ocean mesh 和 underwater pass 共用 |
+| 6 | 未用滞后检测（与 Gerstner 波同场景时） | 警告 | Gerstner 顶点位移导致瞬时水面 Y 振荡 → 浪峰过境时误切水上/水下 → 画面闪烁 | 使用平均水面 Y + 滞后阈值（见 `ocean-waves.md §9.1`） |
 
 ---
 
@@ -316,3 +317,4 @@ if (!canReadDepth) {
 - [ ] EffectComposer 的 `depthBuffer: true` 已设置？
 - [ ] calm 映射了 waterClarity 和 fogColor？
 - [ ] 过渡区（waterLevel ± 5m）的 smoothstep 无跳变？
+- [ ] 如果同场景有 Gerstner 水面 → 检测使用了平均水面 Y + 滞后阈值（非瞬时水面 Y），无闪烁？

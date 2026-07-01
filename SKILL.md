@@ -454,6 +454,7 @@ L5 框架与UI：Frutiger Aero 毛玻璃窗框（css-aesthetic.md + pixel-aero.m
 | **因果场总线（全场景通用 · 必读优先）** | **causal-field.md**（calm 作为单一真相源 → 全部技术路线的参数映射表 + 过渡一致性规则 + 品质层级 + 反模式） | **必读 §一~§五全部** — 在任何技术 reference 之前读取。定义 calm 如何驱动一切——后续每个技术 reference 的参数都必须按此契约绑定 |
 | 3D粒子构成的实体 | shader-patterns.md + particle-physics.md | **必读全部** — 生成前读完 |
 | 流体/液体/气体 | gpu-fluid.md + shader-patterns.md §八 | **必读全部** — 生成前读完 |
+| **风吹草地 / 户外自然 / 阵风扫过空间** | **wind-system.md**（四组分风模型：阵风+碎浪+微风+尖端颤振 / 圆形弧线弯曲 / 空间传播相位 / calm 参数映射 / 三幕剧适配 / GLSL + p5.js + TSL 三套代码骨架 / 与其他技术路线的兼容性） | **必读全部** — 生成前读完（触发条件：场景含"风吹过/草地在动/麦浪/暴风雨后平静/风吹散阴霾/wind"或隐喻涉及"外部力量扫过空间"。不触发：室内/抽象/封闭容器/无细长弹性元素场景） |
 | **水面波浪/海浪/潮汐/涟漪** | **ocean-waves.md**（Gerstner 波 vertex shader / Jacobian 泡沫 / Fresnel 着色 / SSS 浪峰透光 / calm 参数映射 / 移动端降级 / 三幕剧适配） | **必读全部** — 生成前读完 |
 | **水下/潜水/海底/深海/珊瑚礁** | **underwater-post.md**（EffectComposer + depthBuffer / Beer-Lambert 体积吸收 / 水面下潜过渡 / 移动端降级 / 与 ocean-waves 的颜色协调） | **必读全部** — 生成前读完（触发条件：场景含"水下/潜水/海底/深海/沉入水中/珊瑚礁/浮潜"。不触发：纯水面/无水面场景） |
 | **飞越/滑翔/俯瞰/穿行大场景** | **clipmap-lod.md**（视图相关同心环 LOD / 相机 snap + morph 过渡 / ClipmapGeometry JS 构造 / calm 映射细节保留距离 / 与 Gerstner 的集成） | **必读全部** — 生成前读完（触发条件：相机需大幅移动（> 200m）且场景含需要 vertex displacement 的大型平面。不触发：固定相机/小幅 orbit/封闭容器/Canvas2D） |

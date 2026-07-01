@@ -575,3 +575,110 @@ function checkClimax() {
 - [ ] FBO 纹理回读每 30 帧一次（不是每帧）？
 - [ ] 场检测只用于高潮触发——不替代 calm 的参数映射？
 - [ ] 有不支持场检测时的 fallback（`calm > 0.95`）？
+
+---
+
+## 十、扩展：关键帧时间线模式（非默认 · 按隐喻选用）
+
+> 设计哲学源自 threejs-environment-water-and-sky 的 14 锚点昼夜循环：单一时间参数 → 关键帧表 → lerp 插值 → 同时驱动天空/水面/雾/光照。这是因果场总线的**时间域变体**——calm 驱动情绪弧线（三幕剧），关键帧时间线驱动**时间流逝弧线**（昼夜/季节）。
+
+### 10.1 与 calm 总线的关系
+
+| | calm 总线（默认） | 关键帧时间线（扩展） |
+|---|---|---|
+| **自变量** | `calm ∈ [0, 1]` 情绪状态 | `time ∈ [0, 1440]` 分钟（或其他时间单位） |
+| **锚点** | 2 个（calm=0 压抑态，calm=1 治愈态） | N 个（N ≥ 3，每个锚点定义一组参数） |
+| **插值方式** | smoothstep（`calm*calm*(3-2*calm)`） | 分段 lerp（`percentage = (t - anchor[i]) / (anchor[i+1] - anchor[i])`） |
+| **适用场景** | 所有疗愈场景——calm 是三幕剧的数学表达 | 隐喻涉及时间流逝：黄昏→黎明、冬天→春天、潮起→潮落 |
+| **参数数量** | 每个参数 2 个值（压抑/治愈） | 每个参数 N 个值（每个锚点一个） |
+
+**决策规则**：如果隐喻是关于**情绪转化**（焦虑→平静、孤独→连接）→ 用 calm 总线。如果隐喻是关于**时间流逝**（等待黎明、季节疗愈、潮汐节律）→ 用关键帧时间线驱动**环境参数**（天空颜色、光照、雾），calm 驱动**交互强度**。两个轴通过同一个 `time` 变量同步。
+
+### 10.2 最小实现骨架
+
+```javascript
+// === 关键帧时间线 — 当隐喻涉及时间流逝时使用 ===
+
+// 锚点表：每个锚点定义 (时间, 参数集)
+// 示例：一天中的 4 个关键时间点
+const TIMELINE_ANCHORS = [
+  { minute: 0,    values: { skyTop: '#0a1628', skyBot: '#193156', fogColor: '#0d1b2e', sunIntensity: 0.0  } },  // 午夜
+  { minute: 360,  values: { skyTop: '#4a5970', skyBot: '#ffd8b5', fogColor: '#3a4a5c', sunIntensity: 0.3  } },  // 6:00 黎明
+  { minute: 720,  values: { skyTop: '#4d9af2', skyBot: '#c5d9f9', fogColor: '#d8e8f8', sunIntensity: 1.0  } },  // 12:00 正午
+  { minute: 1200, values: { skyTop: '#3878a5', skyBot: '#e2994f', fogColor: '#4a3828', sunIntensity: 0.7  } },  // 20:00 黄昏
+  { minute: 1440, values: { skyTop: '#0a1628', skyBot: '#193156', fogColor: '#0d1b2e', sunIntensity: 0.0  } },  // 24:00（=0:00）
+];
+
+// 查找当前时间所在的锚点区间
+function interpolateTimeline(minute) {
+  // 1. 找到包围区间
+  let i = 0;
+  while (i < TIMELINE_ANCHORS.length - 1 && TIMELINE_ANCHORS[i + 1].minute <= minute) i++;
+  if (i >= TIMELINE_ANCHORS.length - 1) return TIMELINE_ANCHORS[0].values; // 回绕
+  
+  const a = TIMELINE_ANCHORS[i];
+  const b = TIMELINE_ANCHORS[i + 1];
+  
+  // 2. 计算区间内百分比
+  const pct = (minute - a.minute) / (b.minute - a.minute);
+  
+  // 3. 按属性 lerp
+  const result = {};
+  for (const key of Object.keys(a.values)) {
+    if (key.startsWith('#')) {
+      // 颜色属性 → lerp
+      const cA = new THREE.Color(a.values[key]);
+      const cB = new THREE.Color(b.values[key]);
+      result[key] = '#' + cA.lerp(cB, pct).getHexString();
+    } else {
+      // 标量属性 → lerp
+      result[key] = a.values[key] + (b.values[key] - a.values[key]) * pct;
+    }
+  }
+  return result;
+}
+
+// 在 animate() 中使用：
+// const env = interpolateTimeline(currentMinute);
+// sky.updateColors(env.skyTop, env.skyBot);
+// scene.fog.color.set(env.fogColor);
+// sun.setIntensity(env.sunIntensity);
+```
+
+### 10.3 与 calm 的共存规则
+
+当**同一个场景**既需要情绪弧线（calm）又需要时间流逝（timeline）时：
+
+```
+calm 驱动 → 交互参数（粒子刚度/阻尼、音频增益、光标 Lerp 因子）
+            高潮触发条件（calm > 0.95）
+            
+timeline 驱动 → 环境参数（天空颜色、雾色、光照颜色/强度、水面颜色）
+                时间相关的视觉变化（星星出现、太阳角度、潮汐高度）
+
+同步机制 → 两者共享同一个 dt 和时间戳
+          但 timeline 是连续的（随真实时间流逝）
+          而 calm 是用户交互驱动的（跳变→lerp 平滑）
+```
+
+**不可混用的场景**：
+- ❌ calm 驱动天空颜色 + timeline 驱动粒子 → 天空在变蓝（timeline: dawn），粒子在变软（calm: 治愈）→ 两个独立时间轴，画面不协调
+- ✅ 同场景但不同域：timeline 只驱动环境背景，calm 只驱动交互响应 → 用户看到天空在变（时间流逝），但粒子的"情绪"由自己的触摸控制（心理仪式）
+
+### 10.4 何时使用（决策规则）
+
+| 隐喻类型 | 用 calm | 用 timeline | 说明 |
+|---------|--------|-----------|------|
+| 焦虑→平静（室内/抽象） | ✅ 唯一轴 | ❌ | 无时间维度 |
+| 黄昏疗愈（"在日落中找到平静"） | ✅ 交互轴 | ✅ 环境轴 | timeline 驱动天空从黄昏到星夜，calm 驱动粒子从紧张到放松 |
+| 四季疗愈（"冬天过去春天来了"） | ✅ 交互轴 | ✅ 环境轴 | timeline 驱动场景从冬到春，calm 驱动用户参与 |
+| 潮汐疗愈（"像潮水一样呼吸"） | ✅ 唯一轴 | ❌ | 潮汐是隐喻——用 calm 驱动波浪周期变化，不需要独立 timeline |
+| 纯自然场景（"看一整天的光影变化"） | ❌ | ✅ 唯一轴 | 无情绪弧线——纯环境体验。这属于 Pixel Bloom 或新 skill 的领域，不是 Healing Space |
+
+### 10.5 自检
+
+- [ ] 隐喻是否涉及时间流逝？（不涉及 → 不使用 timeline——只用 calm）
+- [ ] timeline 是否只驱动环境参数（天空/雾/光照/水面），不驱动交互参数？
+- [ ] calm 是否只驱动交互参数（粒子/音频/光标），不驱动环境参数？
+- [ ] 如果两者共存 → 是否共享同一个 dt，避免两个独立时间轴？
+- [ ] 锚点数量是否 ≥ 3？（2 个锚点 = 线性过渡 = 直接用 calm，不需要 timeline）

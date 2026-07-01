@@ -504,3 +504,60 @@ if (isMobile) {
 ## 九、交叉引用
 
 - **水下后处理**：场景需要从水面上方下潜到水下 → `underwater-post.md`（EffectComposer depth pass + Beer-Lambert 体积吸收）。水面颜色（uDeepColor）必须与水下雾色（uFogColor）同源取值——否则下潜瞬间颜色突变。
+
+### 9.1 水面↔水下自动切换（滞后检测）
+
+当场景同时使用本文件（Gerstner 水面）和 `underwater-post.md`（水下后处理）时，需要统一的切换逻辑决定当前相机在水上还是水下。
+
+**设计哲学**：继承自 threejs-environment-water-and-sky 的 `camera.position.y < water.position.y` 自动检测模式——但适配 Gerstner 波场景。波浪顶点位移导致瞬时水面 Y 不断变化——必须用平均水面 Y + 滞后阈值防止边界闪烁。
+
+```javascript
+// === 水面↔水下自动切换（放在 animate() 顶部，在更新水面/水下之前） ===
+
+// 平均水面 Y — 不含 Gerstner 位移（即 oceanMesh.position.y）
+const AVG_WATER_Y = 0.0;  // 与 ocean mesh 的 position.y 一致
+const HYSTERESIS = 0.5;   // 滞后阈值（米）— 消除浪峰浪谷引起的闪烁
+
+// 水下状态（闭包变量，初始化时根据相机位置设定）
+let isUnderwater = camera.position.y < AVG_WATER_Y;
+
+function updateSubmersionState(camera) {
+  const camY = camera.position.y;
+  
+  // 滞后逻辑：下潜需要更深，上浮需要更高
+  // → 相机在浪谷时不会误触发水下模式
+  if (!isUnderwater && camY < AVG_WATER_Y - HYSTERESIS) {
+    isUnderwater = true;
+    // 可选：触发下潜音效（见 audio-engine.md §十一 瞬态触发）
+  } else if (isUnderwater && camY > AVG_WATER_Y + HYSTERESIS) {
+    isUnderwater = false;
+    // 可选：触发浮出水面音效
+  }
+  
+  return isUnderwater;
+}
+
+// 在 animate() 中：
+// const underwater = updateSubmersionState(camera);
+// underwaterPass.enabled = underwater;
+// 
+// 水下时同步更新：
+// - underwaterPost uniforms（fogColor ← ocean.uDeepColor 同源）
+// - ocean material uniforms（underwater flag → 调整 Fresnel/透明度）
+// - 太阳/天空可见性（水下 → 隐藏或减弱）
+```
+
+**⚠️ 关键约束**：
+1. `AVG_WATER_Y` 必须与 `oceanMesh.position.y` 一致——Gerstner 位移后的瞬时 Y 不可用于检测
+2. `HYSTERESIS` 推荐值：平静水面 = 0.3，中等浪 = 0.5，风暴浪 = 1.0（浪越大，滞后越大——防止闪烁）
+3. 水面颜色（`uDeepColor`）和水下雾色（`uFogColor`）必须是**同一个 `THREE.Color` 对象或同一组源值**——否则下潜瞬间颜色突变（外部 water-sky 的反模式 2）
+4. 过渡区（AVG_WATER_Y ± HYSTERESIS 范围内）的状态保持不变——这是滞后的核心价值
+
+**滞后原理**：想象相机在浪谷（-2.5m）。瞬时水面 Y 在 -0.8（浪谷）和 +1.2（浪峰）之间振荡。如果没有滞后，相机在每次浪峰经过时短暂"浮出水面"→ 画面闪烁。有了 0.5m 滞后：相机需要上升到 -0.5 + 0.5 = 0.0 以上才触发"浮出"，或下降到 -0.5 - 0.5 = -1.0 以下才触发"下潜"——浪谷的 -2.5m 持续触发"水下"，不受浪峰影响。
+
+### 9.2 自检（追加到 §八）
+
+- [ ] 如果同时加载了 underwater-post.md → `AVG_WATER_Y` 与 `oceanMesh.position.y` 一致？
+- [ ] 滞后阈值是否匹配波浪振幅（HYSTERESIS ≥ 最大浪高 × 0.3）？
+- [ ] `uDeepColor` 和 `uFogColor` 是否同源（同一个 Color 对象或同一组 RGB 值）？
+- [ ] 相机在过渡区（±HYSTERESIS）是否不闪烁？
